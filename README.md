@@ -96,7 +96,8 @@ From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records).
 3. **Fleet output is growing fast.** Monthly battery discharge rose **+38% in CAISO** and **+90% in ERCOT** from Dec 2025 to Oct 2026.
 4. **Batteries move energy from clean hours to dirty ones.** CAISO batteries charge when the grid averages **76 kg CO₂/MWh** and discharge when it averages **176**. ERCOT: **253 → 373**. (Average-intensity estimate; see design notes.)
 5. **Efficiency is right where lithium-ion should be.** Fleet round-trip efficiency averaged **87.4% in CAISO** and **81.3% in ERCOT** over the last three months.
-6. **Two upstream data issues found and fixed:** CAISO reports no battery category to EIA (its batteries are inside "Other"), and ERCOT briefly reported battery charging as "unknown energy storage," which made one month's efficiency read an impossible 164%. Both are remapped in the transform, with tests.
+6. **When an EV charges matters almost as much as being electric.** Using the last 90 days of grid data, an EV charged at midday in California emits about **27 g CO₂/mile**, vs **73 g** charged overnight; in Texas, **70 g** vs **104 g**. An average gas car emits about **400 g**. Surprisingly, overnight is the *dirtiest* time to charge in California: by then solar is gone and batteries have already discharged in the evening.
+7. **Two upstream data issues found and fixed:** CAISO reports no battery category to EIA (its batteries are inside "Other"), and ERCOT briefly reported battery charging as "unknown energy storage," which made one month's efficiency read an impossible 164%. Both are remapped in the transform, with tests.
 
 ## Repo layout
 
