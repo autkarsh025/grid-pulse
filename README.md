@@ -6,6 +6,19 @@ An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-a
 
 ![Average day in CAISO and ERCOT: demand, solar, and batteries charging midday and discharging in the evening](docs/img/duck_curve.png)
 
+## In plain English
+
+California and Texas get a huge share of their electricity from solar. Solar floods the grid at midday and disappears at sunset, right when demand peaks, so other power plants have to ramp up fast every evening. Giant batteries (like Tesla Megapacks) are becoming the fix: they **charge on midday solar and discharge after sunset**.
+
+**This project measures how well that's working, automatically.** Every morning, with no human involved, it:
+1. **Downloads** yesterday's hourly grid data (demand, and generation by source including batteries) from the U.S. Energy Information Administration.
+2. **Checks** it: no missing hours, no duplicates, no impossible values. Bad data is rejected, not stored.
+3. **Stores** it in a SQL database, safely, so re-running a day never creates duplicates.
+4. **Analyzes** it: how much of the evening crunch batteries cover, how efficient they are, how clean the grid is hour by hour, and which readings look abnormal.
+5. **Publishes** the results to the [live dashboard](https://autkarsh025.github.io/grid-pulse/), and opens a GitHub issue if anything fails.
+
+**Why it matters:** it's the same kind of system an energy company's data team runs on its own fleet data: automated ingestion, validation, storage, monitoring and analysis.
+
 ---
 
 ## Architecture

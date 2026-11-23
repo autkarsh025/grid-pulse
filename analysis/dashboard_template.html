@@ -58,6 +58,32 @@
   .insights li { margin: 2px 0; }
   .insights li b { color: var(--text-primary); font-weight: 600; }
 
+  .intro { margin: 22px 0 0; background: var(--surface-1); border: 1px solid var(--border); border-radius: 16px; padding: 4px 20px 18px; }
+  .intro summary { cursor: pointer; list-style: none; padding: 14px 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .intro summary::-webkit-details-marker { display: none; }
+  .intro summary h2 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
+  .intro summary .hint { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
+  .intro .lede { color: var(--text-secondary); font-size: 15.5px; margin: 2px 0 14px; max-width: 900px; }
+  .intro .lede b { color: var(--text-primary); }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .step-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .step-card .num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent);
+                    color: #fff; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .step-card h4 { margin: 0 0 4px; font-size: 15px; }
+  .step-card p { margin: 0; color: var(--text-secondary); font-size: 13.5px; line-height: 1.55; }
+  .step-card p b { color: var(--text-primary); }
+  .howto { color: var(--text-secondary); font-size: 13.5px; margin: 14px 0 0; }
+  .howto b { color: var(--text-primary); }
+  .lookfor { font-size: 13px; color: var(--text-primary); background: var(--surface-2); border-radius: 8px; padding: 7px 10px; margin: 2px 0 8px;
+             border-left: 3px solid var(--accent); max-width: 900px; }
+  .lookfor::before { content: "What to look for: "; font-weight: 600; }
+  .info { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--text-muted);
+          font-size: 10px; color: var(--text-muted); margin-left: 5px; cursor: help; vertical-align: 1px; font-style: normal; }
+  .glossary dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 28px; margin: 8px 0 6px; }
+  .glossary dt { font-weight: 600; font-size: 14px; }
+  .glossary dd { margin: 2px 0 0; color: var(--text-secondary); font-size: 13.5px; }
+  @media (max-width: 860px) { .steps, .glossary dl { grid-template-columns: 1fr; } }
+
   .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin: 20px 0 14px; }
   .controls label { color: var(--text-muted); font-size: 13px; margin-right: 6px; }
   .seg { display: inline-flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
@@ -67,7 +93,7 @@
 
   .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
   .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
-  .kpi .label { color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi .label { color: var(--text-muted); font-size: 13px; line-height: 1.3; min-height: 2.6em; }
   .kpi .value { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
   .kpi .sub { color: var(--text-secondary); font-size: 12.5px; }
 
@@ -146,6 +172,28 @@
     </div>
   </header>
 
+  <details class="intro" id="intro" open>
+    <summary><h2>What is this? Are batteries keeping the lights on after sunset?</h2><span class="hint">▾ hide</span></summary>
+    <p class="lede">California and Texas now get a huge share of their electricity from solar panels. That creates a daily problem, and giant batteries
+      are becoming the fix. This project <b>automatically collects the U.S. government’s hourly power-grid data every morning</b>, checks it, stores it,
+      and measures how much batteries are actually helping.</p>
+    <div class="steps">
+      <div class="step-card"><span class="num">1</span><h4>The problem: the evening crunch</h4>
+        <p>Solar floods the grid at midday, then vanishes at sunset, right when people get home and switch everything on.
+           That leaves a steep evening gap that other power plants (mostly natural gas) have to fill fast.</p></div>
+      <div class="step-card"><span class="num">2</span><h4>The fix: store the sun for later</h4>
+        <p>Grid-scale batteries (like Tesla Megapacks) <b>charge at noon</b> on surplus solar and <b>discharge in the evening</b>,
+           shifting clean energy into the hours when it’s needed most.</p></div>
+      <div class="step-card"><span class="num">3</span><h4>This project: an automated data pipeline</h4>
+        <p>Every morning, with no human involved, it downloads yesterday’s hourly data from the U.S. Energy Information Administration (EIA),
+           runs quality checks, loads it into a SQL database, analyzes it and republishes this page.</p></div>
+    </div>
+    <p class="howto"><b>How to read this page:</b> pick a grid (California or Texas) below. The <b>takeaways</b> and <b>headline numbers</b> summarize the latest data;
+      hover any <span class="info">i</span> for a definition. The tabs go deeper: <b>Batteries</b> (how the fleet behaves), <b>Carbon & mix</b> (how clean the grid is),
+      <b>Anomalies</b> (unusual readings the pipeline flagged) and <b>Data quality</b> (proof every load was checked). Terms are explained in the
+      <a href="#glossary">glossary</a> at the bottom.</p>
+  </details>
+
   <section class="insights" aria-live="polite">
     <h3 id="insights-title">Key takeaways</h3>
     <ul id="insights"></ul>
@@ -170,15 +218,17 @@
   <section class="panel" id="tab-overview" role="tabpanel">
     <div class="grid">
       <div class="card wide">
-        <div class="card-head"><div><h2 id="duck-title">The duck curve, and the batteries filling it</h2>
+        <div class="card-head"><div><h2 id="duck-title">An average day on the grid</h2>
           <p class="desc">Average hour of the day over the last 90 days. Batteries charge on midday solar (below zero) and discharge into the evening.</p></div>
           <button class="btn" data-csv="duck">⤓ CSV</button></div>
+        <p class="lookfor">the green bars dip below zero around noon (batteries soaking up solar) and jump up after the orange solar line falls at sunset. That evening bump is batteries covering the crunch.</p>
         <div class="chart tall" id="duck"></div>
       </div>
       <div class="card wide">
-        <div class="card-head"><div><h2>Batteries vs. the net peak</h2>
+        <div class="card-head"><div><h2>How much of the evening crunch do batteries cover?</h2>
           <p class="desc">Share of each day's net-peak hour (demand minus solar and wind) supplied by batteries, 7-day rolling average. Batteries target the net peak, the hardest hour after sunset, not the gross demand peak.</p></div>
           <button class="btn" data-csv="net">⤓ CSV</button></div>
+        <p class="lookfor">a line climbing over the year means batteries are covering a bigger share of the hardest hour of the day. Higher is better.</p>
         <div class="chart" id="net"></div>
       </div>
       <div class="card wide">
@@ -187,9 +237,10 @@
         <div class="records" id="records"></div>
       </div>
       <div class="card wide">
-        <div class="card-head"><div><h2>Day-ahead demand forecast error</h2>
+        <div class="card-head"><div><h2>How well did the grid predict demand?</h2>
           <p class="desc">How far EIA's day-ahead demand forecast missed actual demand (7-day rolling MAPE).</p></div>
           <button class="btn" data-csv="err">⤓ CSV</button></div>
+        <p class="lookfor">spikes are days the forecast missed badly, often heat waves or storms. Those are exactly the days batteries and spare capacity matter most.</p>
         <div class="chart" id="err"></div>
       </div>
     </div>
@@ -199,27 +250,31 @@
   <section class="panel" id="tab-batteries" role="tabpanel">
     <div class="grid">
       <div class="card wide">
-        <div class="card-head"><div><h2 id="heat-title">A year of battery dispatch</h2>
+        <div class="card-head"><div><h2 id="heat-title">When batteries charge and discharge, all year</h2>
           <p class="desc">Average battery output by week (rows) and local hour (columns). Blue = charging, red = discharging. Watch the midday charging band and the evening discharge band, and how both grow over the year.</p></div>
           <button class="btn" data-csv="heat">⤓ CSV</button></div>
+        <p class="lookfor">each row is one week, each column an hour of the day. A blue band at midday (charging) and a red band in the evening (discharging) that get stronger over the year mean a bigger, busier battery fleet.</p>
         <div class="chart heat" id="heat"></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><h2>Round-trip efficiency</h2>
+        <div class="card-head"><div><h2>How much energy comes back out? (round-trip efficiency)</h2>
           <p class="desc">Energy delivered ÷ energy stored, by month. Lithium-ion fleets typically return about 80–90%.</p></div>
           <button class="btn" data-csv="rte">⤓ CSV</button></div>
+        <p class="lookfor">values inside the shaded 80–90% band are normal for lithium-ion batteries; the rest is lost as heat. A jump far outside it usually means a data problem, not physics.</p>
         <div class="chart" id="rte"></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><h2>Full-power hours per day</h2>
+        <div class="card-head"><div><h2>How hard is the fleet working? (full-power hours)</h2>
           <p class="desc">Daily discharge ÷ the fleet's recent peak output: how many hours of flat-out discharge each day represents (7-day average).</p></div>
           <button class="btn" data-csv="fph">⤓ CSV</button></div>
+        <p class="lookfor">about 4 hours means the fleet does roughly one full charge-and-discharge cycle a day (most grid batteries are built to run 4 hours at full power).</p>
         <div class="chart" id="fph"></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><h2>Monthly battery discharge</h2>
+        <div class="card-head"><div><h2>Battery energy delivered each month</h2>
           <p class="desc">Energy sent to the grid by battery storage, per month.</p></div>
           <button class="btn" data-csv="monthly">⤓ CSV</button></div>
+        <p class="lookfor">taller bars over time mean more battery energy reaching the grid each month.</p>
         <div class="chart" id="monthly"></div>
       </div>
       <div class="card">
@@ -234,15 +289,17 @@
   <section class="panel" id="tab-carbon" role="tabpanel">
     <div class="grid">
       <div class="card">
-        <div class="card-head"><div><h2 id="ci-title">Grid carbon intensity by hour</h2>
+        <div class="card-head"><div><h2 id="ci-title">How dirty is the grid at each hour?</h2>
           <p class="desc">Average kg of CO₂ per MWh generated, by local hour. Dots mark when batteries charge (blue) and discharge (red).</p></div>
           <button class="btn" data-csv="ci">⤓ CSV</button></div>
+        <p class="lookfor">blue dots (charging) sit low, when the grid is clean; red dots (discharging) sit higher, when it’s dirtier. Batteries move clean midday energy into dirtier evening hours.</p>
         <div class="chart" id="ci"></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><h2 id="mix-title">Generation mix</h2>
+        <div class="card-head"><div><h2 id="mix-title">Where the electricity comes from</h2>
           <p class="desc">Monthly share of generation by fuel. Batteries are excluded because they store energy rather than generate it.</p></div>
           <button class="btn" data-csv="mix">⤓ CSV</button></div>
+        <p class="lookfor">how much of each month’s electricity came from each source. Watch solar (yellow) grow into summer and gas fill the gaps.</p>
         <div class="chart" id="mix"></div>
       </div>
       <div class="card wide">
@@ -258,9 +315,10 @@
   <section class="panel" id="tab-anomalies" role="tabpanel">
     <div class="grid">
       <div class="card wide">
-        <div class="card-head"><div><h2 id="anom-title">Anomaly explorer</h2>
+        <div class="card-head"><div><h2 id="anom-title">Unusual readings the pipeline flagged</h2>
           <p class="desc">Last 30 days, hourly. Points are flagged by a robust z-score against the same local hour on the prior 28 days (|z| ≥ 4), or as flatlines (a non-zero value stuck for 8+ hours, which usually means a frozen sensor or a stale feed).</p></div>
           <span class="seg" id="metric-seg" role="group" aria-label="Metric"></span></div>
+        <p class="lookfor">red diamonds are hours that looked very different from the same hour on recent days. Some are real events (heat waves, cloudy days), some are data glitches. Either way, the pipeline flags them automatically.</p>
         <div class="chart" id="anom"></div>
         <div class="scroll"><table id="anom-table"></table></div>
       </div>
@@ -271,7 +329,7 @@
   <section class="panel" id="tab-quality" role="tabpanel">
     <div class="grid">
       <div class="card wide">
-        <div class="card-head"><div><h2>Data-quality checks, run by run</h2>
+        <div class="card-head"><div><h2>Every load was checked: data-quality results, run by run</h2>
           <p class="desc">Every batch is checked <i>before</i> it's loaded. Errors stop the load; warnings are logged. Each column is one pipeline run (newest on the right). Hover a cell for details.</p></div>
           <button class="btn" data-csv="quality">⤓ CSV</button></div>
         <div class="legend-row">
@@ -279,6 +337,7 @@
           <span><span class="qcell" style="background:var(--warning)">!</span> warning</span>
           <span><span class="qcell" style="background:var(--critical);color:#fff">✕</span> failed (blocks the load)</span>
         </div>
+        <p class="lookfor">a column of green checks means that run’s data passed every test before it was saved. A red ✕ means the pipeline refused to load bad data, which is the point.</p>
         <div class="qgrid" id="qgrid"></div>
       </div>
       <div class="card">
@@ -302,6 +361,22 @@
     </div>
   </section>
 
+  <section class="card glossary" id="glossary" style="margin-top:22px">
+    <h2>Glossary</h2>
+    <dl>
+      <div><dt>Megawatt-hour (MWh) / gigawatt (GW)</dt><dd>Units of electricity. One MWh is roughly what 30 U.S. homes use in a day. A GW is 1,000 megawatts of power at one moment.</dd></div>
+      <div><dt>CAISO & ERCOT</dt><dd>The grid operators for most of California (California Independent System Operator) and most of Texas (Electric Reliability Council of Texas).</dd></div>
+      <div><dt>Duck curve</dt><dd>The shape of “demand minus solar” over a day: a deep midday dip (the duck’s belly) and a steep evening ramp (its neck) as solar fades.</dd></div>
+      <div><dt>Net peak</dt><dd>The hour when demand minus solar and wind is highest: the hardest hour for the rest of the grid. Batteries aim at it.</dd></div>
+      <div><dt>Round-trip efficiency</dt><dd>Energy a battery gives back ÷ energy put in. 85% means 15% is lost to heat and electronics.</dd></div>
+      <div><dt>Carbon intensity</dt><dd>kg of CO₂ emitted per MWh generated. Lower is cleaner. Solar, wind, hydro and nuclear count as zero; coal and gas don’t.</dd></div>
+      <div><dt>Data pipeline (ETL)</dt><dd>Software that automatically <b>E</b>xtracts data from a source, <b>T</b>ransforms (cleans) it and <b>L</b>oads it into a database, on a schedule.</dd></div>
+      <div><dt>Data-quality check</dt><dd>An automatic test data must pass before it’s saved, like “no missing hours” or “demand can’t be negative.” Failing data is rejected, not stored.</dd></div>
+      <div><dt>Anomaly</dt><dd>A reading far outside its normal range for that hour. Real events (heat waves, outages) and data glitches both show up.</dd></div>
+      <div><dt>EIA</dt><dd>The U.S. Energy Information Administration, the federal agency that publishes this hourly grid data for free.</dd></div>
+    </dl>
+  </section>
+
   <footer>
     Data: U.S. Energy Information Administration, Hourly Electric Grid Monitor (EIA-930), via the Open Data API v2. CAISO batteries are reported inside EIA's "Other" category and remapped by the pipeline.
     <br>Built by Utkarsh Agarwal · <a href="https://github.com/autkarsh025/grid-pulse">Source on GitHub</a>
@@ -312,6 +387,7 @@
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const regions = Object.keys(D.regions);
+const NAME = { CISO: 'California', ERCO: 'Texas' };
 const state = { region: regions[0], metric: 'battery', tab: 'overview', rendered: new Set() };
 const cfg = { displayModeBar: false, responsive: true };
 const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -391,13 +467,21 @@ function renderHeader() {
 }
 function renderInsights() {
   const lines = (D.insights || {})[state.region] || [];
-  document.getElementById('insights-title').textContent = `Key takeaways · ${D.regions[state.region]}`;
+  document.getElementById('insights-title').textContent = `Key takeaways · ${NAME[state.region]} (${D.regions[state.region]})`;
   document.getElementById('insights').innerHTML = lines.length
     ? lines.map(l => `<li>${esc(l).replace(/(-?\d[\d,]*(?:\.\d+)?%?)/g, '<b>$1</b>')}</li>`).join('') : '<li>Takeaways appear after the first full data load.</li>';
 }
 function renderKpis() {
   const k = D.kpi, r = state.region, g = k.growth[r], co2 = (D.carbon[r] || {}).shift, net = (D.net || {})[r], b = (D.battery || {})[r];
   const nAnom = D.anomalies.filter(a => a.region_code === r).length;
+  const DEF = {
+    'Battery share of net peak': 'The “net peak” is the hardest hour of each day for the grid: demand minus what solar and wind produce, usually right after sunset. This is the share of that hour supplied by batteries.',
+    'Battery growth': 'Change in the total energy batteries delivered in a month, comparing the first and latest full months of data.',
+    'Round-trip efficiency': 'For every 100 MWh put into batteries, how many come back out. Lithium-ion fleets typically return 80–90; the rest is lost as heat.',
+    'Charge → discharge CO₂': 'How carbon-intensive the grid is (kg CO₂ per MWh) when batteries charge vs. when they discharge. Charging low and discharging high means batteries shift clean energy into dirtier hours.',
+    'Anomalies flagged': 'Hourly readings very different from the same hour on recent days, flagged automatically by the pipeline.',
+    'Pipeline success': 'Share of automated pipeline runs that completed and passed every data-quality check.',
+  };
   const tiles = [
     ['Battery share of net peak', net && net.recent_30d != null ? net.recent_30d + '%' : '—', 'avg, last 30 days'],
     ['Battery growth', g ? (g.pct >= 0 ? '+' : '') + g.pct + '%' : '—', g ? `${g.from} → ${g.to}` : 'needs 2+ full months'],
@@ -407,13 +491,13 @@ function renderKpis() {
     ['Pipeline success', k.runs_all ? Math.round(100 * k.runs_ok / k.runs_all) + '%' : '—', `${k.runs_ok} of ${k.runs_all} runs`],
   ];
   document.getElementById('kpis').innerHTML = tiles.map(([l, v, s]) =>
-    `<div class="kpi"><div class="label" title="${esc(l)}">${esc(l)}</div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join('');
+    `<div class="kpi" title="${esc(DEF[l] || l)}"><div class="label">${esc(l)}<i class="info">i</i></div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join('');
 }
 
 // ---------- OVERVIEW
 function renderDuck() {
   const p = D.duck[state.region];
-  document.getElementById('duck-title').textContent = `The duck curve, and the batteries filling it · ${D.regions[state.region]}`;
+  document.getElementById('duck-title').textContent = `An average day on the grid · ${NAME[state.region]}`;
   if (!p) return empty('duck');
   Plotly.react('duck', [
     { x: p.hour, y: p.battery, type: 'bar', name: 'Battery (+ discharge / − charge)', marker: { color: C.battery }, hovertemplate: '%{y:,.1f} GW<extra>Battery</extra>' },
@@ -430,7 +514,7 @@ function renderNet() {
 }
 function renderRecords() {
   const recs = (D.records || {})[state.region] || [];
-  document.getElementById('records-title').textContent = `Records · ${state.region}`;
+  document.getElementById('records-title').textContent = `Records · ${NAME[state.region]}`;
   document.getElementById('records').innerHTML = recs.length ? recs.map(r =>
     `<div class="record"><div class="label">${esc(r.label)}</div><div class="value">${fmt(r.value, r.value < 100 ? 1 : 0)}<small>${esc(r.unit)}</small></div><div class="when">${esc(r.when)}</div></div>`).join('')
     : '<div class="empty">No records yet</div>';
@@ -446,7 +530,7 @@ function renderErr() {
 // ---------- BATTERIES
 function renderHeat() {
   const b = (D.battery || {})[state.region], h = b && b.heatmap;
-  document.getElementById('heat-title').textContent = `A year of battery dispatch · ${D.regions[state.region]}`;
+  document.getElementById('heat-title').textContent = `When batteries charge and discharge, all year · ${NAME[state.region]}`;
   if (!h || !h.weeks.length) return empty('heat');
   const flat = h.z.flat().filter(v => v != null), lim = Math.max(...flat.map(Math.abs), 1);
   Plotly.react('heat', [{ type: 'heatmap', x: h.hours, y: h.weeks, z: h.z, zmin: -lim, zmax: lim, zmid: 0,
@@ -478,7 +562,7 @@ function renderMonthly() {
 }
 function renderPeaks() {
   const r = state.region, rows = D.peaks.filter(p => p.region_code === r);
-  document.getElementById('peaks-title').textContent = `Top-10 demand days · ${r}`;
+  document.getElementById('peaks-title').textContent = `Top-10 demand days · ${NAME[r]}`;
   document.getElementById('peaks-table').innerHTML = rows.length
     ? `<tr><th>#</th><th>Day (UTC)</th><th class="num">Peak demand</th><th class="num">Battery</th><th class="num">Share</th></tr>` +
       rows.map(p => `<tr><td>${p.day_rank}</td><td>${esc(p.day)}</td><td class="num">${fmt(p.peak_demand_mwh)} MWh</td><td class="num">${fmt(p.battery_at_peak_mwh)} MWh</td><td class="num">${fmt(p.battery_share_pct, 1)}%</td></tr>`).join('')
@@ -491,7 +575,7 @@ const FUEL = { SUN: ['Solar', '--solar'], WND: ['Wind', '--wind'], WAT: ['Hydro'
 const FUEL_ORDER = ['SUN', 'WND', 'WAT', 'GEO', 'NUC', 'NG', 'COL', 'OIL'];
 function renderCarbon() {
   const r = state.region, c = D.carbon[r];
-  document.getElementById('ci-title').textContent = `Grid carbon intensity by hour · ${r}`;
+  document.getElementById('ci-title').textContent = `How dirty is the grid at each hour? · ${NAME[r]}`;
   if (!c || !c.hour.length) return empty('ci', 'No generation data yet');
   const duck = D.duck[r] || { hour: [], battery: [] }, byHour = Object.fromEntries(duck.hour.map((h, i) => [h, duck.battery[i]]));
   const pts = c.hour.map((h, i) => ({ h, kg: c.kg[i], b: byHour[h] }));
@@ -504,7 +588,7 @@ function renderCarbon() {
 }
 function renderMix() {
   const r = state.region, m = D.mix, idx = byRegion(m, r);
-  document.getElementById('mix-title').textContent = `Generation mix · ${r}`;
+  document.getElementById('mix-title').textContent = `Where the electricity comes from · ${NAME[r]}`;
   if (!idx.length) return empty('mix', 'No generation data yet');
   const months = [...new Set(idx.map(i => m.month[i]))].sort(), present = [...new Set(idx.map(i => m.fuel_type[i]))];
   const order = FUEL_ORDER.filter(f => present.includes(f)).concat(present.filter(f => !FUEL_ORDER.includes(f)));
@@ -521,7 +605,7 @@ function renderMix() {
 // ---------- ANOMALIES
 function renderAnomalies() {
   const r = state.region, m = state.metric;
-  document.getElementById('anom-title').textContent = `Anomaly explorer · ${r} · ${m}`;
+  document.getElementById('anom-title').textContent = `Unusual readings the pipeline flagged · ${NAME[r]} · ${m}`;
   const s = (D.recent[r] || {})[m], hits = D.anomalies.filter(a => a.region_code === r && a.metric === m);
   const t0 = s && s.t.length ? s.t[0] : null, recentHits = t0 ? hits.filter(a => a.period_utc >= t0) : [];
   const traces = [];
@@ -590,12 +674,17 @@ function segmented(el, items, key, onChange) {
 }
 function renderAll() {
   renderHeader(); renderInsights(); renderKpis();
-  segmented(document.getElementById('region-seg'), regions.map(r => [r, r, regionColor(r)]), 'region', () => { renderInsights(); renderKpis(); state.rendered.clear(); showTab(state.tab); });
+  segmented(document.getElementById('region-seg'), regions.map(r => [r, `${NAME[r] || r} <span style="color:var(--text-muted);font-size:12px">${r}</span>`, regionColor(r)]), 'region', () => { renderInsights(); renderKpis(); state.rendered.clear(); showTab(state.tab); });
   segmented(document.getElementById('metric-seg'), [['battery', 'Battery'], ['demand', 'Demand'], ['solar', 'Solar']], 'metric', renderAnomalies);
   showTab(state.tab);
 }
+const intro = document.getElementById('intro');
+try { if (localStorage.getItem('gp-intro') === 'closed') intro.open = false; } catch (e) {}
+const syncIntro = () => { intro.querySelector('.hint').textContent = intro.open ? '▾ hide' : '▸ show';
+  try { localStorage.setItem('gp-intro', intro.open ? 'open' : 'closed'); } catch (e) {} };
+intro.addEventListener('toggle', syncIntro); syncIntro();
 readColors();
-state.tab = location.hash.slice(1) || 'overview';
+state.tab = TABS[location.hash.slice(1)] ? location.hash.slice(1) : 'overview';
 renderAll();
 </script>
 </body>
