@@ -4,8 +4,7 @@ An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-a
 
 **[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)** · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
 
-<!-- After your first real run, put your best chart here: -->
-<!-- ![Duck curve](docs/img/duck_curve.png) -->
+![Average day in CAISO and ERCOT: demand, solar, and batteries charging midday and discharging in the evening](docs/img/duck_curve.png)
 
 ---
 
@@ -71,11 +70,13 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 ## Findings
 
-<!-- Fill these in from `python -m analysis.run_analysis` output. Use only real numbers from your data. -->
-1. **Battery growth:** _…_
-2. **Duck curve:** _…_
-3. **Net-peak coverage:** _…_
-4. **Carbon:** _…_
+From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records). The dashboard updates these daily.
+
+1. **Batteries now cover a quarter of California's hardest hour.** CAISO batteries supplied **24.9%** of the daily net-peak load over the last 30 days, up from **20.3%** a year earlier. In ERCOT the share nearly doubled, from **7.2% to 12.6%**.
+2. **They target the net peak, not the demand peak.** At the gross demand peak, batteries covered only **4.2%** in CAISO and **~0%** in ERCOT (top-10 demand days), because that peak happens while solar is still producing. They discharge after sunset, when demand minus solar and wind is highest.
+3. **Fleet output is growing fast.** Monthly battery discharge rose **+38% in CAISO** and **+62% in ERCOT** from Dec 2025 to Oct 2026.
+4. **Batteries move energy from clean hours to dirty ones.** CAISO batteries charge when the grid averages **76 kg CO₂/MWh** and discharge when it averages **176**. ERCOT: **253 → 372**. (Average-intensity estimate; see design notes.)
+5. **Data quality finding:** CAISO reports no battery category to EIA. Its batteries are inside "Other," which the pipeline detects and remaps (see "Every grid reports differently" above).
 
 ## Repo layout
 
