@@ -58,7 +58,7 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **Anomaly detection.** Each hourly value is compared with the same local hour over the previous 28 days using a robust z-score (median and MAD, so one bad day can't distort the baseline). A non-zero reading stuck for 8+ hours is flagged as a flatline, which often means a frozen sensor or a stale feed.
 
-**Every grid reports differently.** ERCOT publishes batteries as `BAT`; CAISO has no `BAT` code at all. A data-profiling step (`python -m analysis.run_analysis`) showed CAISO's `OTH` ("Other") swinging from about −7 GW at noon to +5 GW at 7pm, which is the signature of its battery fleet charging on solar and discharging at night. So the transform maps CAISO `OTH` → `BAT` (`config.FUEL_CODE_OVERRIDES`), with the caveat that it includes a small amount of other generation.
+**Every grid reports differently.** ERCOT publishes batteries as `BAT` (plus, briefly in late 2025, charging under `UES`); CAISO has no `BAT` code at all. A data-profiling step (`python -m analysis.run_analysis`) showed CAISO's `OTH` ("Other") swinging from about −7 GW at noon to +5 GW at 7pm, which is the signature of its battery fleet charging on solar and discharging at night. So the transform maps CAISO `OTH` → `BAT` (`config.FUEL_CODE_OVERRIDES`), with the caveat that it includes a small amount of other generation.
 
 **Net peak, not gross peak.** Batteries don't target the hour of highest demand. They target the highest *net* load (demand minus solar and wind), the hard hour after sunset. `sql/analysis/06_net_peak_battery_share.sql` measures battery share at each day's net peak.
 
@@ -76,11 +76,12 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records). The dashboard updates these daily.
 
-1. **Batteries now cover a quarter of California's hardest hour.** CAISO batteries supplied **24.9%** of the daily net-peak load over the last 30 days, up from **20.3%** a year earlier. In ERCOT the share nearly doubled, from **7.2% to 12.6%**.
+1. **Batteries now cover a quarter of California's hardest hour.** CAISO batteries supplied **24.9%** of the daily net-peak load over the last 30 days, up from **20.3%** a year earlier. In ERCOT the share nearly doubled, from **7.1% to 12.6%**.
 2. **They target the net peak, not the demand peak.** At the gross demand peak, batteries covered only **4.2%** in CAISO and **~0%** in ERCOT (top-10 demand days), because that peak happens while solar is still producing. They discharge after sunset, when demand minus solar and wind is highest.
-3. **Fleet output is growing fast.** Monthly battery discharge rose **+38% in CAISO** and **+62% in ERCOT** from Dec 2025 to Oct 2026.
-4. **Batteries move energy from clean hours to dirty ones.** CAISO batteries charge when the grid averages **76 kg CO₂/MWh** and discharge when it averages **176**. ERCOT: **253 → 372**. (Average-intensity estimate; see design notes.)
-5. **Data quality finding:** CAISO reports no battery category to EIA. Its batteries are inside "Other," which the pipeline detects and remaps (see "Every grid reports differently" above).
+3. **Fleet output is growing fast.** Monthly battery discharge rose **+38% in CAISO** and **+90% in ERCOT** from Dec 2025 to Oct 2026.
+4. **Batteries move energy from clean hours to dirty ones.** CAISO batteries charge when the grid averages **76 kg CO₂/MWh** and discharge when it averages **176**. ERCOT: **253 → 373**. (Average-intensity estimate; see design notes.)
+5. **Efficiency is right where lithium-ion should be.** Fleet round-trip efficiency averaged **87.4% in CAISO** and **81.3% in ERCOT** over the last three months.
+6. **Two upstream data issues found and fixed:** CAISO reports no battery category to EIA (its batteries are inside "Other"), and ERCOT briefly reported battery charging as "unknown energy storage," which made one month's efficiency read an impossible 164%. Both are remapped in the transform, with tests.
 
 ## Repo layout
 
