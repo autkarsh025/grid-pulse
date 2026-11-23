@@ -109,3 +109,18 @@ def test_impossible_values_are_quarantined_not_loaded(fake_api, monkeypatch):
 def test_too_much_quarantine_fails_the_batch():
     assert not quality.check_quarantine_share(30, 1000).passed   # 3% > 1% limit
     assert quality.check_quarantine_share(6, 1000).passed
+
+
+def test_net_peak_ignores_hours_where_generation_has_not_arrived(fake_api):
+    """Generation lags demand: the newest hours have demand but no generation yet."""
+    pipeline.run(date(2026, 10, 1), date(2026, 10, 10), check_freshness=False)
+    conn = load.connect()
+    before = conn.execute((config.ROOT / "sql/analysis/06_net_peak_battery_share.sql").read_text()).fetchall()
+    # Simulate lag: delete the last 6 hours of generation for CISO.
+    conn.execute("""DELETE FROM hourly_generation WHERE region_code='CISO' AND period_utc >=
+                    (SELECT datetime(MAX(period_utc), '-5 hours') FROM hourly_generation WHERE region_code='CISO')""")
+    conn.commit()
+    after = conn.execute((config.ROOT / "sql/analysis/06_net_peak_battery_share.sql").read_text()).fetchall()
+    ciso_after = [r for r in after if r[0] == "CISO"]
+    # The incomplete last day is dropped instead of reporting a fake ~0% battery share.
+    assert ciso_after[-1][1] < [r for r in before if r[0] == "CISO"][-1][1]

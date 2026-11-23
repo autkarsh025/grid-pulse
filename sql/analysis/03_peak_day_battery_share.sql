@@ -7,10 +7,12 @@ WITH bat AS (
     WHERE fuel_type = 'BAT'
 ),
 hourly AS (
+    -- INNER JOIN: only hours where battery data has arrived (generation lags demand by hours),
+    -- otherwise the newest hours would count as "0 MWh from batteries".
     SELECT d.region_code, d.period_utc, date(d.period_utc) AS day,
-           d.demand_mwh, COALESCE(b.battery_mwh, 0) AS battery_mwh
+           d.demand_mwh, b.battery_mwh
     FROM hourly_demand d
-    LEFT JOIN bat b USING (region_code, period_utc)
+    JOIN bat b USING (region_code, period_utc)
     WHERE d.demand_mwh IS NOT NULL
 ),
 daily_peak AS (

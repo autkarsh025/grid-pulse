@@ -257,7 +257,7 @@
         <div class="card-head"><div><h2>How much of the evening crunch do batteries cover?</h2>
           <p class="desc">Share of each day's net-peak hour (demand minus solar and wind) supplied by batteries, 7-day rolling average. Batteries target the net peak, the hardest hour after sunset, not the gross demand peak.</p></div>
           <button class="btn" data-csv="net">⤓ CSV</button></div>
-        <p class="lookfor">a line climbing over the year means batteries are covering a bigger share of the hardest hour of the day. Higher is better.</p>
+        <p class="lookfor">a line climbing over the year means batteries are covering a bigger share of the hardest hour of the day. Higher is better. Grids under 3% start hidden; click a name in the legend to show or hide it. Grids with no line don’t report battery data.</p>
         <div class="chart" id="net"></div>
       </div>
       <div class="card wide">
@@ -384,7 +384,7 @@
         <div class="card-head"><div><h2>Battery energy delivered each month</h2>
           <p class="desc">Energy sent to the grid by battery storage, per month.</p></div>
           <button class="btn" data-csv="monthly">⤓ CSV</button></div>
-        <p class="lookfor">taller bars over time mean more battery energy reaching the grid each month.</p>
+        <p class="lookfor">taller bars over time mean more battery energy reaching the grid each month. Faded bars are partial months (the current one, or the first month of data), so they’re not a real decline.</p>
         <div class="chart" id="monthly"></div>
       </div>
       <div class="card">
@@ -555,6 +555,8 @@ function dateAxis(title) {
       buttons: [{ count: 1, label: '1M', step: 'month', stepmode: 'backward' }, { count: 3, label: '3M', step: 'month', stepmode: 'backward' },
                 { count: 6, label: '6M', step: 'month', stepmode: 'backward' }, { step: 'all', label: 'All' }] } };
 }
+// Charts with zoom buttons put their legend BELOW the plot, so the two never collide.
+function legendBelow() { return { legend: { orientation: 'h', x: 0, y: -0.16, yanchor: 'top', font: { color: C.sec } }, margin: { l: 58, r: 16, t: 34, b: 64 } }; }
 function empty(id, msg = 'No data yet') { document.getElementById(id).innerHTML = `<div class="empty">${msg}</div>`; }
 const byRegion = (cols, r) => cols.region_code.map((x, i) => x === r ? i : -1).filter(i => i >= 0);
 
@@ -634,10 +636,12 @@ function renderDuck() {
                   yaxis: { gridcolor: C.border, title: 'GW (average)', zerolinecolor: C.muted } }), cfg);
 }
 function renderNet() {
-  const traces = regions.filter(r => D.net && D.net[r]).map(r => ({ x: D.net[r].day, y: D.net[r].share_7d, name: r, type: 'scatter', mode: 'lines',
-    line: { color: regionColor(r), width: r === state.region ? 3 : 1.5 }, opacity: r === state.region ? 1 : 0.55, hovertemplate: '%{y:.1f}%' }));
+  // Grids whose batteries cover < 3% start hidden (they'd pile up along zero); click the legend to show them.
+  const traces = regions.filter(r => D.net && D.net[r]).map(r => ({ x: D.net[r].day, y: D.net[r].share_7d, name: NAME[r] || r, type: 'scatter', mode: 'lines',
+    visible: r === state.region || (D.net[r].recent_30d ?? 0) >= 3 ? true : 'legendonly',
+    line: { color: regionColor(r), width: r === state.region ? 3 : 1.5 }, opacity: r === state.region ? 1 : 0.6, hovertemplate: '%{y:.1f}%' }));
   if (!traces.length) return empty('net');
-  Plotly.react('net', traces, baseLayout({ xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: '% of net-peak load', rangemode: 'tozero' } }), cfg);
+  Plotly.react('net', traces, baseLayout({ ...legendBelow(), xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: '% of net-peak load', rangemode: 'tozero' } }), cfg);
 }
 function renderRecords() {
   const recs = (D.records || {})[state.region] || [];
@@ -651,7 +655,8 @@ function renderErr() {
   const traces = regions.map(r => { const idx = byRegion(e, r);
     return { x: idx.map(i => e.day[i]), y: idx.map(i => e.mape_7d_avg_pct[i]), name: r, type: 'scatter', mode: 'lines',
              line: { color: regionColor(r), width: r === state.region ? 3 : 1.2 }, opacity: r === state.region ? 1 : 0.45, hovertemplate: '%{y:.2f}%' }; });
-  Plotly.react('err', traces, baseLayout({ xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: '% error', rangemode: 'tozero' } }), cfg);
+  traces.forEach((t, i) => t.name = NAME[regions[i]] || regions[i]);
+  Plotly.react('err', traces, baseLayout({ ...legendBelow(), xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: '% error', rangemode: 'tozero' } }), cfg);
 }
 
 // ---------- COMPARE
@@ -797,6 +802,7 @@ function renderRte() {
     type: 'scatter', mode: 'lines+markers', line: { color: regionColor(r), width: r === state.region ? 3 : 1.2 }, opacity: r === state.region ? 1 : 0.45,
     marker: { size: r === state.region ? 8 : 4 }, hovertemplate: '%{y:.1f}%' }));
   if (!traces.length) return empty('rte');
+  traces.forEach(t => t.name = NAME[t.name] || t.name);
   Plotly.react('rte', traces, baseLayout({ yaxis: { gridcolor: C.border, title: '% returned', range: [0, 110] },
     shapes: [{ type: 'rect', xref: 'paper', x0: 0, x1: 1, y0: 80, y1: 90, fillcolor: C.good, opacity: 0.08, line: { width: 0 } }] }), cfg);
 }
@@ -804,13 +810,18 @@ function renderFph() {
   const traces = regions.filter(r => D.battery && D.battery[r]).map(r => ({ x: D.battery[r].fph.day, y: D.battery[r].fph.hours_7d, name: r,
     type: 'scatter', mode: 'lines', line: { color: regionColor(r), width: r === state.region ? 3 : 1.2 }, opacity: r === state.region ? 1 : 0.45, hovertemplate: '%{y:.2f} h' }));
   if (!traces.length) return empty('fph');
-  Plotly.react('fph', traces, baseLayout({ xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: 'hours', rangemode: 'tozero' } }), cfg);
+  traces.forEach(t => t.name = NAME[t.name] || t.name);
+  Plotly.react('fph', traces, baseLayout({ ...legendBelow(), xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: 'hours', rangemode: 'tozero' } }), cfg);
 }
 function renderMonthly() {
   const m = D.monthly;
   const traces = [state.region].map(r => { const idx = byRegion(m, r);
+    // A month with < 28 days of data is partial (the current month, or the first): faded, labeled.
+    const partial = idx.map(i => (m.hours[i] || 0) < 24 * 28);
     return { x: idx.map(i => m.month[i]), y: idx.map(i => m.discharge_mwh[i] == null ? null : m.discharge_mwh[i] / 1e6), name: NAME[r] || r,
-             type: 'bar', marker: { color: regionColor(r) }, hovertemplate: '%{y:,.2f} TWh' }; });
+             type: 'bar', marker: { color: regionColor(r), opacity: partial.map(p => p ? 0.35 : 1) },
+             text: partial.map(p => p ? 'partial month' : ''), textposition: 'none',
+             hovertemplate: '%{y:,.2f} TWh %{text}<extra></extra>' }; });
   if (!traces[0].x.length) return empty('monthly', 'No separate battery data reported for this grid.');
   Plotly.react('monthly', traces, baseLayout({ barmode: 'group', bargap: 0.25, yaxis: { gridcolor: C.border, title: 'TWh', rangemode: 'tozero' } }), cfg);
 }

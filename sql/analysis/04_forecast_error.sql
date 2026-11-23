@@ -9,6 +9,7 @@ WITH daily AS (
     FROM hourly_demand
     WHERE demand_mwh > 0 AND forecast_mwh IS NOT NULL
     GROUP BY region_code, day
+    HAVING COUNT(*) >= 22                       -- skip partial days at the edges
 )
 SELECT
     region_code,

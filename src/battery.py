@@ -50,7 +50,8 @@ def full_power_hours(df: pd.DataFrame, region: str) -> pd.DataFrame:
         return pd.DataFrame(columns=["day", "discharge_mwh", "peak_mw", "full_power_hours"])
     r["day"] = r["local"].dt.date
     daily = r.groupby("day").agg(discharge_mwh=("mwh", lambda s: s.clip(lower=0).sum()),
-                                 day_peak=("mwh", "max")).reset_index()
+                                 day_peak=("mwh", "max"), hours=("mwh", "size")).reset_index()
+    daily = daily[daily["hours"] >= 22]   # partial first/last days would fake a drop
     daily["peak_mw"] = daily["day_peak"].clip(lower=0).rolling(30, min_periods=7).max()
     daily["full_power_hours"] = (daily["discharge_mwh"] / daily["peak_mw"].where(daily["peak_mw"] > 0)).round(2)
     daily["day"] = daily["day"].astype(str)
