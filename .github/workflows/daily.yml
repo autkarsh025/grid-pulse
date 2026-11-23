@@ -24,7 +24,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -r requirements.txt -r requirements-spark.txt
 
       # GitHub runners start empty, so the SQLite file is carried between runs with the cache.
       # Each run saves a new cache entry; restore-keys picks up the most recent one.
@@ -48,6 +52,9 @@ jobs:
           else
             python -m src.pipeline
           fi
+
+      - name: Spark job (Parquet lake + net peak) validated against SQL
+        run: python -m spark.net_peak_spark --report docs/spark_validation.json
 
       - name: Rebuild dashboard and charts
         run: |

@@ -13,5 +13,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt
-      - run: pytest -q
+      - uses: actions/setup-java@v4       # Spark runs on the JVM
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -r requirements.txt -r requirements-spark.txt
+      - run: pytest -q -rs

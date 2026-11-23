@@ -451,6 +451,11 @@
         <div class="qgrid" id="qgrid"></div>
       </div>
       <div class="card wide">
+        <h2>Spark cross-check</h2>
+        <p class="desc">Every morning the data is also exported to a Parquet “data lake” (partitioned by grid and month) and the net-peak analysis is re-run in Apache Spark. The Spark answer must match the SQL answer day for day, or the run fails.</p>
+        <div id="spark-box"></div>
+      </div>
+      <div class="card wide">
         <div class="card-head"><div><h2>Quarantined values</h2>
           <p class="desc">Individual readings that were physically impossible (for example, demand below zero or far above a grid’s all-time record). They’re set aside here with the reason, so they don’t block the rest of the day’s data, and they’re never silently loaded or dropped.</p></div>
           <button class="btn" data-csv="quarantine">⤓ CSV</button></div>
@@ -491,6 +496,7 @@
       <div><dt>Anomaly</dt><dd>A reading far outside its normal range for that hour. Real events (heat waves, outages) and data glitches both show up.</dd></div>
       <div><dt>ISO / RTO (the seven grids)</dt><dd>Independent organizations that run the power grid and wholesale market for a region: CAISO (California), ERCOT (Texas), PJM (13 Mid-Atlantic and Midwest states plus DC), MISO (the Midwest and parts of the South), SPP (the Great Plains), NYISO (New York) and ISO-NE (New England).</dd></div>
       <div><dt>Interchange (imports / exports)</dt><dd>Power flowing between neighboring grids. A grid “imports” when it buys more than it sells in an hour.</dd></div>
+      <div><dt>Spark & Parquet</dt><dd>Apache Spark processes data in parallel across many machines; Parquet is a columnar file format it reads efficiently. Partitioning files by grid and month lets Spark skip folders a query doesn’t need (“partition pruning”).</dd></div>
       <div><dt>Quarantine</dt><dd>Where impossible individual values are set aside, with the reason, instead of being loaded or silently deleted. A batch only fails if too many values (over 1%) need quarantining.</dd></div>
       <div><dt>Energy balance check</dt><dd>A data-quality test: demand should equal generation minus exports. Each grid reports all three separately, so a mismatch reveals a broken data feed.</dd></div>
       <div><dt>g CO₂ per mile</dt><dd>How much carbon dioxide is released per mile driven: from the tailpipe for a gas car, from power plants for an EV. An average gas car emits about 400.</dd></div>
@@ -904,6 +910,13 @@ function renderQuality() {
     document.getElementById('qgrid').innerHTML = `<table><tr><th>Check</th>${runs.map(r => `<th title="${esc(r.window_start)} → ${esc(r.window_end)}">#${r.run_id}</th>`).join('')}</tr>` +
       checks.map(c => `<tr><td>${esc(c.replace(/_/g, ' '))}</td>${runs.map(r => cell(r, c)).join('')}</tr>`).join('') + '</table>';
   }
+  const sp = D.spark, box = document.getElementById('spark-box');
+  box.innerHTML = !sp ? '<div class="empty">The Spark check appears after the next scheduled run.</div>' :
+    `<div class="records" style="margin:4px 0 6px">
+      <div class="record"><div class="label">Result</div><div class="value" style="color:${sp.ok ? C.good : C.crit}">${sp.ok ? '✓ Match' : '✕ Mismatch'}</div><div class="when">checked ${esc(sp.checked_at)}</div></div>
+      <div class="record"><div class="label">Region-days compared</div><div class="value">${fmt(sp.rows_spark)}</div><div class="when">${fmt(sp.value_mismatches)} value mismatches · ${fmt(sp.missing_on_one_side)} missing</div></div>
+      <div class="record"><div class="label">Rows exported to Parquet</div><div class="value">${fmt((sp.rows_exported.hourly_demand || 0) + (sp.rows_exported.hourly_generation || 0))}</div><div class="when">Spark ${esc(sp.spark_version)} · job ${fmt(sp.spark_seconds, 1)} s</div></div>
+    </div><p class="desc" style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">${esc(sp.partition_filters)}</p>`;
   const qr = D.quarantine || [];
   document.getElementById('quarantine-table').innerHTML = qr.length
     ? `<tr><th>Grid</th><th>Hour (UTC)</th><th>Field</th><th class="num">Value</th><th>Reason</th></tr>` +

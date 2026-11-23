@@ -1,0 +1,30 @@
+# Run grid-pulse's Airflow DAG on your laptop, in one container.
+#
+#   cd docker/airflow
+#   docker compose up            # first start takes a few minutes (downloads the image)
+#   open http://localhost:8080   # user: admin, password: see "Find the password" below
+#
+# "airflow standalone" runs the scheduler, web server and a SQLite metadata DB together:
+# perfect for local development (production would use separate services + Postgres).
+#
+# Find the password:  docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt
+# Stop:               docker compose down        (add -v to wipe Airflow's own state)
+
+services:
+  airflow:
+    image: apache/airflow:2.10.5-python3.12
+    command: standalone
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../../.env                      # provides EIA_API_KEY (the same .env the pipeline uses)
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/grid-pulse/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      GRID_PULSE_DATA_DIR: /opt/airflow/grid-pulse/data
+      PYTHONPATH: /opt/airflow/grid-pulse
+      _PIP_ADDITIONAL_REQUIREMENTS: "python-dotenv==1.0.1"
+    volumes:
+      - ../..:/opt/airflow/grid-pulse   # the whole repo, so the DAG can import src/
+    user: "${AIRFLOW_UID:-50000}:0"
