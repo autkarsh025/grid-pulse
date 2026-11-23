@@ -47,7 +47,7 @@ def check_null_share(df: pd.DataFrame, column: str, name: str,
                      max_share: float = config.MAX_NULL_SHARE) -> CheckResult:
     share = float(df[column].isna().mean()) if len(df) else 0.0
     return CheckResult(
-        f"{name}_{column}_nulls", share <= max_share,
+        f"{column}_nulls", share <= max_share,
         f"{share:.2%} missing (limit {max_share:.0%})",
     )
 

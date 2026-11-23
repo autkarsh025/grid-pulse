@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     error_message  TEXT
 );
 
+-- Every data-quality check result for every run: the pipeline's observability history.
+CREATE TABLE IF NOT EXISTS quality_results (
+    run_id      INTEGER NOT NULL REFERENCES pipeline_runs(run_id),
+    check_name  TEXT NOT NULL,
+    passed      INTEGER NOT NULL,           -- 1 / 0
+    severity    TEXT NOT NULL,              -- 'error' / 'warn'
+    detail      TEXT,
+    PRIMARY KEY (run_id, check_name)
+);
+
 -- Derived table, rebuilt by src/anomalies.py after each load.
 CREATE TABLE IF NOT EXISTS anomalies (
     region_code   TEXT NOT NULL REFERENCES regions(region_code),

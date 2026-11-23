@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `38 passed`.
+**Checkpoint:** `43 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -112,6 +112,13 @@ The first real run showed no battery data for California, even though CAISO has 
 
 **Know it cold (net peak):** batteries discharge at the *net* peak (demand minus solar and wind), not the gross demand peak. In ERCOT the gross peak is late afternoon, when solar is still producing, while batteries discharge after sunset. `06_net_peak_battery_share.sql` measures the share at each day's net peak.
 
+**Know it cold (`battery.py`, `07_battery_round_trip.sql`):**
+- **Round-trip efficiency (RTE)** = MWh discharged ÷ MWh charged. Real lithium-ion fleets return roughly 80–90%; losses are heat, inverters and auxiliary load. Monthly totals smooth out energy carried overnight. If CAISO's RTE looks off, the reason is that its "BAT" comes from EIA's "Other" category, which also holds a little non-battery output. Say that before they ask.
+- **Full-power hours** = daily discharge ÷ the fleet's peak hourly discharge (trailing 30 days). EIA's hourly feed has no installed capacity, so the observed peak stands in for it. A 4-hour fleet doing one full cycle a day scores about 4.
+- **Dispatch heatmap:** week × local hour, on a diverging color scale (blue = charging, red = discharging, gray = idle). It shows the midday charging band and the evening discharge band growing over the year.
+
+**Know it cold (observability):** `quality_results` stores every check for every run, *including failed runs* (results are saved before `enforce` raises). That's how you'd answer "how often does this source send bad data?" Monitoring data quality over time, not just pass/fail today, is what production data teams do.
+
 **Know it cold (`carbon.py`):**
 - **Intensity** = Σ(generation × emission factor) / Σ generation for each hour. Factors come from EIA: coal ≈ 2,257 lb/MWh, gas ≈ 976 lb/MWh, renewables and nuclear 0.
 - **Why batteries are excluded:** a battery has no fuel. Its emissions belong to whatever charged it. Counting its discharge as zero-carbon generation would double-count the solar that charged it.
@@ -194,7 +201,7 @@ git push -u origin main
 ### Résumé bullets (fill in only with your real numbers)
 **Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
 - Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across 2 grid regions into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 38 pytest tests and per-run logging.
+- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 43 pytest tests and per-run logging.
 - Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
 
 [N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`

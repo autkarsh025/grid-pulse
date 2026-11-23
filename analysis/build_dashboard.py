@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src import carbon, config
+from src import battery, carbon, config
 
 SQL_DIR = config.ROOT / "sql" / "analysis"
 OUT = config.ROOT / "docs" / "index.html"
@@ -122,6 +122,68 @@ def net_payload(net: pd.DataFrame) -> dict:
     return out
 
 
+def battery_payload(bat: pd.DataFrame, rte: pd.DataFrame) -> dict:
+    out = {}
+    for region in config.REGIONS:
+        fph = battery.full_power_hours(bat, region)
+        rr = rte[rte["region_code"] == region]
+        recent = pd.to_numeric(rr["round_trip_pct"], errors="coerce").tail(3).mean()
+        out[region] = {
+            "heatmap": battery.dispatch_heatmap(bat, region),
+            "fph": {"day": fph["day"].tolist(), "hours": nulls(fph["full_power_hours"]),
+                    "hours_7d": nulls(pd.to_numeric(fph["full_power_hours"]).rolling(7, min_periods=3).mean().round(2))},
+            "rte": {"month": rr["month"].tolist(), "pct": nulls(rr["round_trip_pct"])},
+            "rte_recent": None if pd.isna(recent) else round(float(recent), 1),
+        }
+    return out
+
+
+def add_extra_records(data: dict, hourly_ci: pd.DataFrame, net: pd.DataFrame) -> None:
+    """Records that need computed data: cleanest hour, best net-peak day."""
+    for region in config.REGIONS:
+        recs = data["records"].setdefault(region, [])
+        h = hourly_ci[hourly_ci["region_code"] == region].dropna(subset=["intensity_kg_per_mwh"])
+        if not h.empty:
+            best = h.loc[h["intensity_kg_per_mwh"].idxmin()]
+            when = pd.Timestamp(best["period_utc"], tz="UTC").tz_convert(config.REGION_TZ[region])
+            recs.append({"label": "Cleanest hour on the grid", "value": round(float(best["intensity_kg_per_mwh"]), 1),
+                         "unit": "kg CO₂/MWh", "when": when.strftime("%b %d, %Y · %-I %p")})
+        n = net[net["region_code"] == region].copy()
+        n["share"] = pd.to_numeric(n["battery_share_of_net_peak_pct"], errors="coerce")
+        n = n.dropna(subset=["share"])
+        if not n.empty:
+            best = n.loc[n["share"].idxmax()]
+            recs.append({"label": "Best day for batteries at the net peak", "value": round(float(best["share"]), 1),
+                         "unit": "% of net peak", "when": pd.Timestamp(best["day"]).strftime("%b %d, %Y")})
+
+
+def insights(data: dict) -> dict:
+    """Plain-English takeaways per region, regenerated on every build from the numbers above."""
+    out = {}
+    for region in config.REGIONS:
+        lines = []
+        net = data["net"].get(region)
+        if net and net["share_7d"]:
+            vals = [v for v in net["share_7d"] if v is not None]
+            if len(vals) > 60 and net.get("recent_30d") is not None:
+                first = sum(vals[:30]) / 30
+                lines.append(f"Batteries supplied {net['recent_30d']}% of the evening net peak over the last 30 days, "
+                             f"vs {first:.1f}% at the start of the record.")
+        g = data["kpi"]["growth"].get(region)
+        if g:
+            lines.append(f"Monthly battery discharge is {'up' if g['pct'] >= 0 else 'down'} {abs(g['pct'])}% "
+                         f"from {g['from']} to {g['to']}.")
+        c = (data["carbon"].get(region) or {}).get("shift")
+        if c and c.get("charge_intensity") is not None:
+            lines.append(f"Batteries charge when the grid averages {c['charge_intensity']:.0f} kg CO₂/MWh "
+                         f"and discharge when it averages {c['discharge_intensity']:.0f}.")
+        b = data["battery"].get(region)
+        if b and b.get("rte_recent") is not None:
+            lines.append(f"Fleet round-trip efficiency averaged {b['rte_recent']}% over the last three months.")
+        out[region] = lines
+    return out
+
+
 def build(db_path: Path) -> Path:
     conn = sqlite3.connect(db_path)
     try:
@@ -135,6 +197,14 @@ def build(db_path: Path) -> Path:
         shift = carbon.battery_shift(hourly_ci) if not hourly_ci.empty else pd.DataFrame()
         mix = q(conn, (SQL_DIR / "05_fuel_mix_monthly.sql").read_text())
         net = q(conn, (SQL_DIR / "06_net_peak_battery_share.sql").read_text())
+        rte = q(conn, (SQL_DIR / "07_battery_round_trip.sql").read_text())
+        bat = battery.battery_hourly(conn)
+        quality_hist = q(conn, """SELECT r.run_id, r.started_at, r.window_start, r.window_end, r.status,
+                                         c.check_name, c.passed, c.severity, c.detail
+                                  FROM quality_results c JOIN pipeline_runs r USING (run_id)
+                                  WHERE r.run_id IN (SELECT run_id FROM pipeline_runs ORDER BY run_id DESC LIMIT 30)
+                                  ORDER BY r.run_id""")
+        recs = {reg: battery.records(conn, reg) for reg in config.REGIONS}
         runs = q(conn, "SELECT run_id, started_at, window_start, window_end, rows_loaded, status, "
                        "error_message FROM pipeline_runs ORDER BY run_id DESC LIMIT 20")
         data = {
@@ -150,7 +220,12 @@ def build(db_path: Path) -> Path:
             "carbon": carbon_payload(hourly_ci, shift),
             "mix": mix.to_dict(orient="list"),
             "net": net_payload(net),
+            "battery": battery_payload(bat, rte),
+            "records": recs,
+            "quality": quality_hist.to_dict(orient="records"),
         }
+        add_extra_records(data, hourly_ci, net)
+        data["insights"] = insights(data)
     finally:
         conn.close()
 

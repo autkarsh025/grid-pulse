@@ -2,7 +2,7 @@
 
 An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, estimates grid carbon intensity, and publishes a self-updating interactive dashboard on how batteries cover solar's evening drop-off in **California (CAISO)** and **Texas (ERCOT)**.
 
-**[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)** · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
+**[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)**: auto-written takeaways, records, a year-long battery dispatch heatmap, round-trip efficiency, carbon intensity, anomaly explorer and run-by-run data-quality history, with light/dark mode and CSV downloads. · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
 
 ![Average day in CAISO and ERCOT: demand, solar, and batteries charging midday and discharging in the evening](docs/img/duck_curve.png)
 
@@ -40,7 +40,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 38 tests, no API key needed
+pytest -q                                              # 43 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -64,6 +64,10 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **Carbon intensity.** Each hour's grid intensity is generation-weighted CO₂ per MWh, using EIA's average emission rates for coal and gas (`src/config.py`). Batteries are excluded from the mix, since they re-deliver energy rather than make it. The battery "CO₂ shift" compares the intensity of the hours when batteries charge with the hours when they discharge. This uses average, not marginal, intensity: a deliberate, documented simplification.
 
+**Battery analytics.** Round-trip efficiency = energy discharged ÷ energy charged, by month (`sql/analysis/07_battery_round_trip.sql`). "Full-power hours" = daily discharge ÷ the fleet's peak hourly output over the trailing 30 days, a utilization measure that works without installed-capacity data. A week × hour heatmap shows how dispatch shifts across the year.
+
+**Observability.** Every data-quality check result for every run is stored in `quality_results` (even for failed runs) and shown as a run-by-run grid on the dashboard.
+
 **Alerting.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently.
 
 **Raw data kept.** API responses are saved untouched before transforming, so a transform bug can be fixed and replayed without re-downloading.
@@ -81,7 +85,7 @@ From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records).
 ## Repo layout
 
 ```
-src/        extract, transform, quality, load, anomalies, carbon, pipeline (CLI), config
+src/        extract, transform, quality, load, anomalies, carbon, battery, pipeline (CLI), config
 sql/        schema.sql + analysis queries (CTEs, window functions)
 dags/       Airflow DAG: extract >> transform >> quality >> load >> detect_anomalies
 analysis/   charts and dashboard builder

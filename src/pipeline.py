@@ -86,7 +86,10 @@ def run_window(start: date, end: date, from_raw: bool = False, db_path: Path | N
     try:
         raw = raw_paths_for(start, end) if from_raw else extract_step(start, end)
         staged = transform_step(raw, start, end)
-        quality_step(staged, start, end)   # raises before anything is loaded
+        results = quality.run_batch_checks(transform.read_staged(Path(staged["demand"])),
+                                           transform.read_staged(Path(staged["generation"])), start, end)
+        load.record_checks(conn, run_id, results)   # history is kept even when the run fails
+        quality.enforce(results)                    # raises before anything is loaded
         rows = load_step(staged, db_path)
         load.finish_run(conn, run_id, "success", rows)
         log.info("window %s..%s: loaded %d rows", start, end, rows)

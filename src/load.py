@@ -100,3 +100,15 @@ def finish_run(conn: sqlite3.Connection, run_id: int, status: str,
                WHERE run_id = ?""",
             (utc_now(), status, rows_loaded, error, run_id),
         )
+
+
+def record_checks(conn: sqlite3.Connection, run_id: int, results) -> None:
+    """Persist each data-quality CheckResult for this run (pass or fail)."""
+    with conn:
+        conn.executemany(
+            """INSERT INTO quality_results (run_id, check_name, passed, severity, detail)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(run_id, check_name) DO UPDATE SET
+                   passed = excluded.passed, severity = excluded.severity, detail = excluded.detail""",
+            [(run_id, r.name, int(r.passed), r.severity, r.detail) for r in results],
+        )
