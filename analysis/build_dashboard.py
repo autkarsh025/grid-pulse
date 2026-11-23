@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src import battery, carbon, config
+from src import battery, carbon, config, ev
 
 SQL_DIR = config.ROOT / "sql" / "analysis"
 OUT = config.ROOT / "docs" / "index.html"
@@ -177,6 +177,12 @@ def insights(data: dict) -> dict:
         if c and c.get("charge_intensity") is not None:
             lines.append(f"Batteries charge when the grid averages {c['charge_intensity']:.0f} kg CO₂/MWh "
                          f"and discharge when it averages {c['discharge_intensity']:.0f}.")
+        e = (data.get("ev") or {}).get("regions", {}).get(region)
+        if e and e.get("windows_90d", {}).get("midday") is not None and e["windows_90d"].get("evening") is not None:
+            kpm = data["ev"]["default_kwh_per_mile"]
+            lines.append(f"An EV charged at midday emits about {e['windows_90d']['midday'] * kpm:.0f} g CO₂ per mile here, "
+                         f"vs {e['windows_90d']['evening'] * kpm:.0f} g if charged in the evening and "
+                         f"{data['ev']['gas_g_per_mile']:.0f} g for an average gas car.")
         b = data["battery"].get(region)
         if b and b.get("rte_recent") is not None:
             lines.append(f"Fleet round-trip efficiency averaged {b['rte_recent']}% over the last three months.")
@@ -223,6 +229,7 @@ def build(db_path: Path) -> Path:
             "battery": battery_payload(bat, rte),
             "records": recs,
             "quality": quality_hist.to_dict(orient="records"),
+            "ev": ev.payload(hourly_ci) if not hourly_ci.empty else {"regions": {}},
         }
         add_extra_records(data, hourly_ci, net)
         data["insights"] = insights(data)

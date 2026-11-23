@@ -84,6 +84,22 @@
   .glossary dd { margin: 2px 0 0; color: var(--text-secondary); font-size: 13.5px; }
   @media (max-width: 860px) { .steps, .glossary dl { grid-template-columns: 1fr; } }
 
+  .calc { display: grid; grid-template-columns: minmax(260px, 1fr) 2fr; gap: 20px; align-items: start; }
+  .calc .inputs { display: grid; gap: 12px; }
+  .calc label.field { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+  .calc input, .calc select { font: inherit; font-size: 14px; color: var(--text-primary); background: var(--surface-2);
+                              border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; width: 100%; }
+  .calc .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .calc .results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .bars { margin-top: 14px; display: grid; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: 150px 1fr 90px; gap: 10px; align-items: center; font-size: 13px; color: var(--text-secondary); }
+  .bar-track { background: var(--surface-2); border-radius: 6px; height: 18px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width .25s; }
+  .bar-row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+  .hours { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
+  .hour-chip { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 4px 12px; font-size: 13.5px; }
+  @media (max-width: 860px) { .calc { grid-template-columns: 1fr; } .calc .results { grid-template-columns: 1fr 1fr; } .bar-row { grid-template-columns: 110px 1fr 70px; } }
+
   .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin: 20px 0 14px; }
   .controls label { color: var(--text-muted); font-size: 13px; margin-right: 6px; }
   .seg { display: inline-flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
@@ -189,7 +205,7 @@
            runs quality checks, loads it into a SQL database, analyzes it and republishes this page.</p></div>
     </div>
     <p class="howto"><b>How to read this page:</b> pick a grid (California or Texas) below. The <b>takeaways</b> and <b>headline numbers</b> summarize the latest data;
-      hover any <span class="info">i</span> for a definition. The tabs go deeper: <b>Batteries</b> (how the fleet behaves), <b>Carbon & mix</b> (how clean the grid is),
+      hover any <span class="info">i</span> for a definition. The tabs go deeper: <b>EV charging</b> (when an electric car is cleanest to charge, with a calculator), <b>Batteries</b> (how the fleet behaves), <b>Carbon & mix</b> (how clean the grid is),
       <b>Anomalies</b> (unusual readings the pipeline flagged) and <b>Data quality</b> (proof every load was checked). Terms are explained in the
       <a href="#glossary">glossary</a> at the bottom.</p>
   </details>
@@ -208,6 +224,7 @@
 
   <nav class="tabs" role="tablist" aria-label="Dashboard sections">
     <button role="tab" data-tab="overview">Overview</button>
+    <button role="tab" data-tab="ev">EV charging ⚡</button>
     <button role="tab" data-tab="batteries">Batteries</button>
     <button role="tab" data-tab="carbon">Carbon & mix</button>
     <button role="tab" data-tab="anomalies">Anomalies</button>
@@ -242,6 +259,55 @@
           <button class="btn" data-csv="err">⤓ CSV</button></div>
         <p class="lookfor">spikes are days the forecast missed badly, often heat waves or storms. Those are exactly the days batteries and spare capacity matter most.</p>
         <div class="chart" id="err"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EV -->
+  <section class="panel" id="tab-ev" role="tabpanel">
+    <div class="grid">
+      <div class="card wide">
+        <div class="card-head"><div><h2 id="ev-title">When should you charge an EV?</h2>
+          <p class="desc">CO₂ per mile driven, depending on the hour the car was charged. Because the grid’s mix changes through the day, the same EV can be much cleaner or dirtier depending on <i>when</i> it plugs in. The dashed line is an average gas car.</p></div>
+          <button class="btn" data-csv="ev">⤓ CSV</button></div>
+        <p class="lookfor">the dip in the middle of the day is solar. Charging then is the cleanest. The higher the line in the evening, the more that hour leans on gas plants. Every point below the dashed line beats a gasoline car.</p>
+        <div class="chart" id="ev-chart"></div>
+      </div>
+      <div class="card wide">
+        <h2>Your EV vs. a gas car: a calculator</h2>
+        <p class="desc">Plug in your driving and when you usually charge. Results use the last 90 days of real grid data for the selected region.</p>
+        <div class="calc">
+          <div class="inputs">
+            <label class="field">Miles driven per day<input id="ev-miles" type="number" min="1" max="300" value="30"></label>
+            <label class="field">Car efficiency (kWh per mile, from the window sticker)<input id="ev-kpm" type="number" min="0.15" max="0.7" step="0.01" value="0.28"></label>
+            <div class="presets">
+              <button class="btn" data-kpm="0.25">Efficient sedan · 0.25</button>
+              <button class="btn" data-kpm="0.30">Crossover/SUV · 0.30</button>
+              <button class="btn" data-kpm="0.45">Electric pickup · 0.45</button>
+            </div>
+            <label class="field">When do you usually charge?
+              <select id="ev-window">
+                <option value="overnight">Overnight (midnight–6 AM)</option>
+                <option value="evening">After work (6–10 PM)</option>
+                <option value="midday">Midday (10 AM–3 PM)</option>
+                <option value="smart">Smart: the 4 cleanest hours</option>
+              </select></label>
+          </div>
+          <div>
+            <div class="results" id="ev-results"></div>
+            <div class="bars" id="ev-bars"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 id="ev-week-title">Cleanest hours to charge this week</h2>
+        <p class="desc">Based on the last 7 days of grid data. Shift charging toward these hours if you can.</p>
+        <div id="ev-week"></div>
+      </div>
+      <div class="card">
+        <h2>How this is calculated</h2>
+        <p class="desc">EV g CO₂/mile = grid intensity (g CO₂ per kWh, which equals kg per MWh) × the car’s kWh per mile. EPA window-sticker efficiency is measured at the wall, so charging losses are included.
+          Gas car: EPA’s 8,887 g CO₂ per gallon ÷ 22.2 mpg ≈ 400 g/mile. Both figures exclude upstream emissions (oil refining, fuel and plant supply chains), and grid intensity is an hourly <i>average</i>, not the marginal plant.</p>
       </div>
     </div>
   </section>
@@ -373,6 +439,7 @@
       <div><dt>Data pipeline (ETL)</dt><dd>Software that automatically <b>E</b>xtracts data from a source, <b>T</b>ransforms (cleans) it and <b>L</b>oads it into a database, on a schedule.</dd></div>
       <div><dt>Data-quality check</dt><dd>An automatic test data must pass before it’s saved, like “no missing hours” or “demand can’t be negative.” Failing data is rejected, not stored.</dd></div>
       <div><dt>Anomaly</dt><dd>A reading far outside its normal range for that hour. Real events (heat waves, outages) and data glitches both show up.</dd></div>
+      <div><dt>g CO₂ per mile</dt><dd>How much carbon dioxide is released per mile driven: from the tailpipe for a gas car, from power plants for an EV. An average gas car emits about 400.</dd></div>
       <div><dt>EIA</dt><dd>The U.S. Energy Information Administration, the federal agency that publishes this hourly grid data for free.</dd></div>
     </dl>
   </section>
@@ -454,6 +521,8 @@ const CSV = {
   monthly: () => download('battery_monthly', ['region', 'month', 'discharge_mwh', 'charge_mwh'], D.monthly.region_code.map((r, i) => [r, D.monthly.month[i], D.monthly.discharge_mwh[i], D.monthly.charge_mwh[i]])),
   ci: () => { const c = D.carbon[state.region]; download(`carbon_${state.region}`, ['local_hour', 'kg_co2_per_mwh'], c.hour.map((h, i) => [h, c.kg[i]])); },
   mix: () => download('fuel_mix', ['region', 'month', 'fuel', 'share_pct'], D.mix.region_code.map((r, i) => [r, D.mix.month[i], D.mix.fuel_type[i], D.mix.share_pct[i]])),
+  ev: () => { const e = D.ev.regions[state.region], k = evInputs().kpm;
+    download(`ev_${state.region}`, ['local_hour', 'grid_g_per_kwh_90d', 'ev_g_per_mile_90d', 'gas_g_per_mile'], e.hour.map((h, i) => [h, e.g_per_kwh_90d[i], e.g_per_kwh_90d[i] == null ? '' : (e.g_per_kwh_90d[i] * k).toFixed(1), D.ev.gas_g_per_mile])); },
   quality: () => download('quality_checks', ['run_id', 'window_start', 'window_end', 'check', 'passed', 'severity', 'detail'], D.quality.map(q => [q.run_id, q.window_start, q.window_end, q.check_name, q.passed, q.severity, q.detail])),
 };
 document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => CSV[b.dataset.csv]());
@@ -526,6 +595,64 @@ function renderErr() {
              line: { color: regionColor(r), width: 2 }, hovertemplate: '%{y:.2f}%' }; });
   Plotly.react('err', traces, baseLayout({ xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: '% error', rangemode: 'tozero' } }), cfg);
 }
+
+// ---------- EV
+const hourLabel = h => `${(h % 12) || 12} ${h < 12 ? 'AM' : 'PM'}`;
+function evInputs() {
+  const miles = Math.max(1, +document.getElementById('ev-miles').value || 30);
+  const kpm = Math.min(0.7, Math.max(0.15, +document.getElementById('ev-kpm').value || 0.28));
+  return { miles, kpm, win: document.getElementById('ev-window').value };
+}
+function renderEvChart() {
+  const r = state.region, e = (D.ev && D.ev.regions || {})[r];
+  document.getElementById('ev-title').textContent = `When should you charge an EV? · ${NAME[r]}`;
+  if (!e || !e.g_per_kwh_90d.length) return empty('ev-chart');
+  const { kpm } = evInputs();
+  const gpm = e.g_per_kwh_90d.map(v => v == null ? null : +(v * kpm).toFixed(1));
+  const gpm7 = e.g_per_kwh_7d.map(v => v == null ? null : +(v * kpm).toFixed(1));
+  Plotly.react('ev-chart', [
+    { x: e.hour, y: gpm, type: 'scatter', mode: 'lines+markers', name: 'EV, last 90 days', line: { color: C.battery, width: 3 }, marker: { size: 7 },
+      hovertemplate: '%{y:.0f} g CO₂/mile<extra>EV (90 days)</extra>' },
+    { x: e.hour, y: gpm7, type: 'scatter', mode: 'lines', name: 'EV, last 7 days', line: { color: C.battery, width: 1.5, dash: 'dot' },
+      hovertemplate: '%{y:.0f} g CO₂/mile<extra>EV (7 days)</extra>' },
+    { x: [0, 23], y: [D.ev.gas_g_per_mile, D.ev.gas_g_per_mile], type: 'scatter', mode: 'lines', name: 'Average gas car',
+      line: { color: C.crit, width: 2, dash: 'dash' }, hovertemplate: '%{y:.0f} g CO₂/mile<extra>Gas car</extra>' },
+  ], baseLayout({ xaxis: { gridcolor: C.border, title: 'Hour the car was charged (local time)', tickvals: [0, 3, 6, 9, 12, 15, 18, 21], ticktext: [0, 3, 6, 9, 12, 15, 18, 21].map(hourLabel) },
+                  yaxis: { gridcolor: C.border, title: 'g CO₂ per mile driven', rangemode: 'tozero' } }), cfg);
+}
+function renderEvCalc() {
+  const r = state.region, e = (D.ev && D.ev.regions || {})[r];
+  const res = document.getElementById('ev-results'), bars = document.getElementById('ev-bars');
+  if (!e || !e.windows_90d || e.windows_90d.smart == null) { res.innerHTML = '<div class="empty">No data yet</div>'; bars.innerHTML = ''; return; }
+  const { miles, kpm, win } = evInputs(), yr = miles * 365;
+  const evKg = w => e.windows_90d[w] == null ? null : e.windows_90d[w] * kpm * yr / 1000;
+  const gasKg = D.ev.gas_g_per_mile * yr / 1000, mine = evKg(win), saved = gasKg - mine;
+  const tiles = [
+    ['Your EV, per year', `${fmt(mine)} kg`, `CO₂ · ${fmt(mine / yr * 1000)} g/mile`],
+    ['Same driving in a gas car', `${fmt(gasKg)} kg`, `CO₂ · ${fmt(D.ev.gas_g_per_mile)} g/mile`],
+    ['You avoid', `${fmt(100 * saved / gasKg)}%`, `${fmt(saved)} kg CO₂ a year`],
+  ];
+  res.innerHTML = tiles.map(([l, v, s]) => `<div class="kpi"><div class="label" style="min-height:0">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`).join('');
+  const rows = [['Gas car', gasKg, C.crit], ['EV · after work', evKg('evening'), C.sec], ['EV · overnight', evKg('overnight'), C.sec],
+                ['EV · midday', evKg('midday'), C.sec], ['EV · smart', evKg('smart'), C.battery]].filter(x => x[1] != null);
+  const max = Math.max(...rows.map(x => x[1]));
+  const sel = { evening: 'EV · after work', overnight: 'EV · overnight', midday: 'EV · midday', smart: 'EV · smart' }[win];
+  bars.innerHTML = rows.map(([l, v, c]) => `<div class="bar-row"><span style="${l === sel ? 'color:var(--text-primary);font-weight:600' : ''}">${l}${l === sel ? ' ◀ you' : ''}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${(100 * v / max).toFixed(1)}%;background:${l === sel ? C.battery : c};opacity:${l === sel || l === 'Gas car' ? 1 : 0.55}"></div></div>
+    <span class="v">${fmt(v)} kg/yr</span></div>`).join('');
+}
+function renderEvWeek() {
+  const r = state.region, e = (D.ev && D.ev.regions || {})[r];
+  document.getElementById('ev-week-title').textContent = `Cleanest hours to charge this week · ${NAME[r]}`;
+  const box = document.getElementById('ev-week');
+  if (!e || !e.cleanest_hours_7d.length) { box.innerHTML = '<div class="empty">No data yet</div>'; return; }
+  const { kpm } = evInputs(), g = h => e.g_per_kwh_7d[h] == null ? '—' : fmt(e.g_per_kwh_7d[h] * kpm) + ' g/mi';
+  box.innerHTML = `<div class="meta">Cleanest</div><div class="hours">${e.cleanest_hours_7d.map(h => `<span class="hour-chip"><span class="dot" style="background:${C.good}"></span> ${hourLabel(h)} · ${g(h)}</span>`).join('')}</div>
+    <div class="meta" style="margin-top:8px">Dirtiest (avoid if you can)</div><div class="hours">${e.dirtiest_hours_7d.map(h => `<span class="hour-chip"><span class="dot" style="background:${C.crit}"></span> ${hourLabel(h)} · ${g(h)}</span>`).join('')}</div>`;
+}
+function renderEv() { renderEvChart(); renderEvCalc(); renderEvWeek(); }
+['ev-miles', 'ev-kpm', 'ev-window'].forEach(id => document.getElementById(id).addEventListener('input', renderEv));
+document.querySelectorAll('[data-kpm]').forEach(b => b.onclick = () => { document.getElementById('ev-kpm').value = b.dataset.kpm; renderEv(); });
 
 // ---------- BATTERIES
 function renderHeat() {
@@ -647,6 +774,7 @@ function renderQuality() {
 // ---------- tabs and orchestration
 const TABS = {
   overview: [renderDuck, renderNet, renderRecords, renderErr],
+  ev: [renderEv],
   batteries: [renderHeat, renderRte, renderFph, renderMonthly, renderPeaks],
   carbon: [renderCarbon, renderMix],
   anomalies: [renderAnomalies],

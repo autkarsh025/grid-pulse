@@ -2,7 +2,7 @@
 
 An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, estimates grid carbon intensity, and publishes a self-updating interactive dashboard on how batteries cover solar's evening drop-off in **California (CAISO)** and **Texas (ERCOT)**.
 
-**[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)**: auto-written takeaways, records, a year-long battery dispatch heatmap, round-trip efficiency, carbon intensity, anomaly explorer and run-by-run data-quality history, with light/dark mode and CSV downloads. · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
+**[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)**: auto-written takeaways, an **EV charging carbon calculator**, records, a year-long battery dispatch heatmap, round-trip efficiency, carbon intensity, anomaly explorer and run-by-run data-quality history, with light/dark mode and CSV downloads. · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
 
 ![Average day in CAISO and ERCOT: demand, solar, and batteries charging midday and discharging in the evening](docs/img/duck_curve.png)
 
@@ -14,7 +14,7 @@ California and Texas get a huge share of their electricity from solar. Solar flo
 1. **Downloads** yesterday's hourly grid data (demand, and generation by source including batteries) from the U.S. Energy Information Administration.
 2. **Checks** it: no missing hours, no duplicates, no impossible values. Bad data is rejected, not stored.
 3. **Stores** it in a SQL database, safely, so re-running a day never creates duplicates.
-4. **Analyzes** it: how much of the evening crunch batteries cover, how efficient they are, how clean the grid is hour by hour, and which readings look abnormal.
+4. **Analyzes** it: how much of the evening crunch batteries cover, how efficient they are, how clean the grid is hour by hour, when an EV is cleanest to charge, and which readings look abnormal.
 5. **Publishes** the results to the [live dashboard](https://autkarsh025.github.io/grid-pulse/), and opens a GitHub issue if anything fails.
 
 **Why it matters:** it's the same kind of system an energy company's data team runs on its own fleet data: automated ingestion, validation, storage, monitoring and analysis.
@@ -53,7 +53,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 43 tests, no API key needed
+pytest -q                                              # 48 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -81,6 +81,8 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **Observability.** Every data-quality check result for every run is stored in `quality_results` (even for failed runs) and shown as a run-by-run grid on the dashboard.
 
+**EV charging carbon.** Grid intensity in kg CO₂/MWh equals g CO₂/kWh, so an EV's g CO₂/mile = hourly grid intensity × the car's kWh/mile (`src/ev.py`). Compared with EPA's gas-car baseline (8,887 g CO₂/gallon ÷ 22.2 mpg ≈ 400 g/mile), it shows how much cleaner an EV is depending on *when* it charges, plus a calculator and the cleanest charging hours of the past week.
+
 **Alerting.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently.
 
 **Raw data kept.** API responses are saved untouched before transforming, so a transform bug can be fixed and replayed without re-downloading.
@@ -99,7 +101,7 @@ From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records).
 ## Repo layout
 
 ```
-src/        extract, transform, quality, load, anomalies, carbon, battery, pipeline (CLI), config
+src/        extract, transform, quality, load, anomalies, carbon, battery, ev, pipeline (CLI), config
 sql/        schema.sql + analysis queries (CTEs, window functions)
 dags/       Airflow DAG: extract >> transform >> quality >> load >> detect_anomalies
 analysis/   charts and dashboard builder

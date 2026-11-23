@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `43 passed`.
+**Checkpoint:** `48 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -121,6 +121,14 @@ The first real run showed no battery data for California, even though CAISO has 
 
 **Know it cold (observability):** `quality_results` stores every check for every run, *including failed runs* (results are saved before `enforce` raises). That's how you'd answer "how often does this source send bad data?" Monitoring data quality over time, not just pass/fail today, is what production data teams do.
 
+**Know it cold (`ev.py`, the EV tab):**
+- **Unit trick:** kg CO₂/MWh = g CO₂/kWh (both numerator and denominator scale by 1,000). So EV g/mile = grid g/kWh × kWh/mile. Example: 150 g/kWh × 0.28 kWh/mi = 42 g/mile.
+- **Gas baseline:** EPA says 8,887 g CO₂ per gallon; at 22.2 mpg that's about 400 g/mile.
+- **Charging losses:** EPA's kWh/100 mi sticker ratings are measured at the wall, so losses are already included. Don't add them twice.
+- **"Smart" charging** = the 4 cleanest hours of the average day, which in solar-heavy grids lands at midday. This is the case for workplace charging and for software that times charging to the grid.
+- **Caveats to say yourself:** tailpipe-only vs. power-plant-only (both skip upstream), and average rather than marginal intensity.
+- **Why Tesla cares:** the same logic drives scheduled/off-peak charging, Powerwall charge-from-solar, and fleet charging that follows grid signals.
+
 **Know it cold (`carbon.py`):**
 - **Intensity** = Σ(generation × emission factor) / Σ generation for each hour. Factors come from EIA: coal ≈ 2,257 lb/MWh, gas ≈ 976 lb/MWh, renewables and nuclear 0.
 - **Why batteries are excluded:** a battery has no fuel. Its emissions belong to whatever charged it. Counting its discharge as zero-carbon generation would double-count the solar that charged it.
@@ -203,7 +211,7 @@ git push -u origin main
 ### Résumé bullets (fill in only with your real numbers)
 **Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
 - Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across 2 grid regions into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 43 pytest tests and per-run logging.
+- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 48 pytest tests and per-run logging.
 - Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
 
 [N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`
