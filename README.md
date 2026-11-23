@@ -2,6 +2,8 @@
 
 # 🌅 Sundown
 
+### Tracking how batteries cover the evening peak on U.S. grids
+
 **An automated data pipeline and live dashboard measuring how grid-scale batteries carry America's seven power grids
 through solar's evening drop-off, with EV-charging carbon, anomalies and data-quality monitoring.**
 

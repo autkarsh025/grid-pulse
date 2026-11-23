@@ -1,6 +1,6 @@
 # 🌅 Sundown: build guide (your playbook)
 
-(Repo name: `grid-pulse`; the GitHub URLs below keep that name.)
+*Tracking how batteries cover the evening peak on U.S. grids.* (Repo name: `grid-pulse`; the GitHub URLs below keep that name.)
 
 This is your path from "zip on my laptop" to "live project on my résumé." Work through it in order. Each phase ends with a **checkpoint** (proof it works) and a **know it cold** list: the things you should be able to explain without looking. Interviewers will open your repo and ask about any line of it, so read every file as you go.
 
