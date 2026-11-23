@@ -1,6 +1,6 @@
 """Airflow DAG: runs the grid-pulse pipeline once a day, one task per stage.
 
-extract >> transform >> quality >> load >> detect_anomalies
+extract >> transform >> quality >> load >> [enrich_weather, detect_anomalies]
 
 Tasks pass small values (file paths) through XCom, never DataFrames: XCom lives in
 Airflow's metadata database and isn't meant for bulk data. The real data moves
@@ -72,7 +72,18 @@ def grid_pulse():
         finally:
             conn.close()
 
-    detect_anomalies(load(quality(transform(extract()))))
+    @task
+    def enrich_weather(_rows_loaded: int) -> int:
+        start, end = _window()
+        conn = pipeline.load.connect()
+        try:
+            return pipeline.weather.refresh(conn, start, end)  # never raises
+        finally:
+            conn.close()
+
+    loaded = load(quality(transform(extract())))
+    enrich_weather(loaded)
+    detect_anomalies(loaded)
 
 
 grid_pulse()

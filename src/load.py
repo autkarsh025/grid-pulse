@@ -29,12 +29,23 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
 
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(config.SCHEMA_PATH.read_text())
+    migrate(conn)
     conn.executemany(
         """INSERT INTO regions (region_code, region_name, timezone) VALUES (?, ?, ?)
            ON CONFLICT(region_code) DO UPDATE SET
                region_name = excluded.region_name, timezone = excluded.timezone""",
         [(code, name, config.REGION_TZ[code]) for code, name in config.REGIONS.items()],
     )
+    conn.commit()
+
+
+def migrate(conn: sqlite3.Connection) -> None:
+    """Schema migrations for databases created by older versions (CREATE TABLE IF NOT EXISTS
+    never alters an existing table). Each step is safe to re-run."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(hourly_demand)")}
+    for col in ("net_generation_mwh", "interchange_mwh"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE hourly_demand ADD COLUMN {col} REAL")
     conn.commit()
 
 
@@ -46,16 +57,20 @@ def _records(df: pd.DataFrame, columns: list[str]) -> list[tuple]:
 
 def upsert_demand(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
     now = utc_now()
-    rows = [r + (now,) for r in _records(df, ["region_code", "period_utc", "demand_mwh", "forecast_mwh"])]
+    cols = ["region_code", "period_utc", "demand_mwh", "forecast_mwh", "net_generation_mwh", "interchange_mwh"]
+    rows = [r + (now,) for r in _records(df, cols)]
     # COALESCE keeps an existing value if a re-pull comes back NULL for that field,
     # but a real new value (EIA revises data) always wins.
     conn.executemany(
-        """INSERT INTO hourly_demand (region_code, period_utc, demand_mwh, forecast_mwh, updated_at)
-           VALUES (?, ?, ?, ?, ?)
+        """INSERT INTO hourly_demand (region_code, period_utc, demand_mwh, forecast_mwh,
+                                      net_generation_mwh, interchange_mwh, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(region_code, period_utc) DO UPDATE SET
-               demand_mwh   = COALESCE(excluded.demand_mwh, hourly_demand.demand_mwh),
-               forecast_mwh = COALESCE(excluded.forecast_mwh, hourly_demand.forecast_mwh),
-               updated_at   = excluded.updated_at""",
+               demand_mwh         = COALESCE(excluded.demand_mwh, hourly_demand.demand_mwh),
+               forecast_mwh       = COALESCE(excluded.forecast_mwh, hourly_demand.forecast_mwh),
+               net_generation_mwh = COALESCE(excluded.net_generation_mwh, hourly_demand.net_generation_mwh),
+               interchange_mwh    = COALESCE(excluded.interchange_mwh, hourly_demand.interchange_mwh),
+               updated_at         = excluded.updated_at""",
         rows,
     )
     return len(rows)
@@ -100,6 +115,19 @@ def finish_run(conn: sqlite3.Connection, run_id: int, status: str,
                WHERE run_id = ?""",
             (utc_now(), status, rows_loaded, error, run_id),
         )
+
+
+def upsert_weather(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
+    now = utc_now()
+    rows = [r + (now,) for r in _records(df, ["region_code", "period_utc", "temp_f"])]
+    with conn:
+        conn.executemany(
+            """INSERT INTO weather_hourly (region_code, period_utc, temp_f, updated_at) VALUES (?, ?, ?, ?)
+               ON CONFLICT(region_code, period_utc) DO UPDATE SET
+                   temp_f = COALESCE(excluded.temp_f, weather_hourly.temp_f), updated_at = excluded.updated_at""",
+            rows,
+        )
+    return len(rows)
 
 
 def record_checks(conn: sqlite3.Connection, run_id: int, results) -> None:

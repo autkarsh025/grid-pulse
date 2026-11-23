@@ -15,7 +15,7 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from src import anomalies, config, extract, load, quality, transform
+from src import anomalies, config, extract, load, quality, transform, weather
 
 log = logging.getLogger("grid_pulse")
 
@@ -114,6 +114,7 @@ def run(start: date, end: date, from_raw: bool = False, check_freshness: bool | 
             errors.append(exc)
     conn = load.connect(db_path)
     try:
+        weather.refresh(conn, start, end)   # enrichment: never fails the run
         anomalies.refresh(conn)
     finally:
         conn.close()

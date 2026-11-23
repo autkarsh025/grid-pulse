@@ -68,3 +68,15 @@ def test_failed_batch_rolls_back():
     except Exception:
         pass
     assert _count(conn, "hourly_demand") == 0, "demand rows must roll back with the failed generation load"
+
+
+def test_migration_adds_new_columns_to_an_old_database():
+    import sqlite3
+    from src import config
+    conn = sqlite3.connect(config.DB_PATH)
+    conn.execute("""CREATE TABLE hourly_demand (region_code TEXT, period_utc TEXT, demand_mwh REAL,
+                    forecast_mwh REAL, updated_at TEXT, PRIMARY KEY (region_code, period_utc))""")
+    conn.commit()
+    load.init_db(conn)  # must not fail on the old table, and must add the new columns
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(hourly_demand)")}
+    assert {"net_generation_mwh", "interchange_mwh"} <= cols

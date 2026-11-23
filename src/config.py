@@ -33,19 +33,43 @@ PAGE_SIZE = 5000          # EIA's maximum rows per request
 REQUEST_TIMEOUT_S = 60
 CHUNK_DAYS = 30           # backfills are split into chunks of this many days
 
-# Balancing authorities to track. CISO = California ISO, ERCO = ERCOT (Texas).
+# Balancing authorities to track: the seven U.S. ISOs/RTOs, which together serve most of
+# the country's electricity demand. Codes are EIA "respondent" IDs.
 REGIONS: dict[str, str] = {
     "CISO": "California ISO",
     "ERCO": "Electric Reliability Council of Texas",
+    "PJM": "PJM Interconnection (Mid-Atlantic & Ohio Valley)",
+    "MISO": "Midcontinent ISO (Midwest & South)",
+    "SWPP": "Southwest Power Pool (Great Plains)",
+    "NYIS": "New York ISO",
+    "ISNE": "ISO New England",
 }
-# Local time zones, used only for analysis and the solar-at-night check.
+# Local time zones (analysis only; storage is always UTC). Multi-zone grids use their main zone.
 REGION_TZ: dict[str, str] = {
     "CISO": "America/Los_Angeles",
     "ERCO": "America/Chicago",
+    "PJM": "America/New_York",
+    "MISO": "America/Chicago",
+    "SWPP": "America/Chicago",
+    "NYIS": "America/New_York",
+    "ISNE": "America/New_York",
+}
+# One representative load-center city per grid, for the weather join.
+REGION_WEATHER_POINT: dict[str, tuple[str, float, float]] = {
+    "CISO": ("Los Angeles", 34.05, -118.24),
+    "ERCO": ("Dallas", 32.78, -96.80),
+    "PJM": ("Philadelphia", 39.95, -75.17),
+    "MISO": ("Minneapolis", 44.98, -93.27),
+    "SWPP": ("Oklahoma City", 35.47, -97.52),
+    "NYIS": ("New York City", 40.71, -74.01),
+    "ISNE": ("Boston", 42.36, -71.06),
 }
 
 # region-data "type" codes we keep, and the column each becomes.
-DEMAND_TYPES: dict[str, str] = {"D": "demand_mwh", "DF": "forecast_mwh"}
+# NG = net generation inside the grid; TI = total interchange with neighbors (EIA sign
+# convention: positive = net exports, negative = net imports). Identity: D ~= NG - TI.
+DEMAND_TYPES: dict[str, str] = {"D": "demand_mwh", "DF": "forecast_mwh",
+                                "NG": "net_generation_mwh", "TI": "interchange_mwh"}
 
 # Fuel codes. Confirm the battery code in the API browser (fueltype facet).
 SOLAR_CODE = "SUN"
@@ -84,6 +108,18 @@ MIN_COMPLETENESS = 0.95        # fail if fewer than 95% of expected hours arrive
 MAX_DEMAND_MWH: dict[str, float] = {  # sanity ceilings, well above record peaks
     "CISO": 70_000,
     "ERCO": 120_000,
+    "PJM": 220_000,
+    "MISO": 180_000,
+    "SWPP": 90_000,
+    "NYIS": 50_000,
+    "ISNE": 45_000,
 }
+# Reconciliation: demand should equal net generation minus interchange. Warn if the
+# median hourly gap exceeds this share of demand.
+MAX_BALANCE_GAP = 0.03
 SOLAR_NIGHT_MAX_SHARE = 0.05   # warn if night solar > 5% of the batch's peak solar
-FRESHNESS_HOURS = 72           # EIA publishes with a lag, so allow a few days
+FRESHNESS_HOURS = 72
+
+# ---------------------------------------------------------------- weather (enrichment)
+WEATHER_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+WEATHER_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"   # fills the archive's last few days           # EIA publishes with a lag, so allow a few days

@@ -18,7 +18,7 @@ from src import config
 log = logging.getLogger(__name__)
 
 TS_FORMAT = "%Y-%m-%d %H:%M:%S"  # how timestamps are stored in SQLite
-DEMAND_COLUMNS = ["region_code", "period_utc", "demand_mwh", "forecast_mwh"]
+DEMAND_COLUMNS = ["region_code", "period_utc", "demand_mwh", "forecast_mwh", "net_generation_mwh", "interchange_mwh"]
 GENERATION_COLUMNS = ["region_code", "period_utc", "fuel_type", "generation_mwh"]
 
 

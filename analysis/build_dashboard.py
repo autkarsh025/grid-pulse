@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src import battery, carbon, config, ev
+from src import battery, carbon, config, ev, stats, weather
 
 SQL_DIR = config.ROOT / "sql" / "analysis"
 OUT = config.ROOT / "docs" / "index.html"
@@ -157,6 +157,24 @@ def add_extra_records(data: dict, hourly_ci: pd.DataFrame, net: pd.DataFrame) ->
                          "unit": "% of net peak", "when": pd.Timestamp(best["day"]).strftime("%b %d, %Y")})
 
 
+def league_extras(data: dict, hourly_ci: pd.DataFrame, temps: dict) -> dict:
+    """Per-region values for the league table that come from other payloads."""
+    out = {}
+    avg_ci = hourly_ci.groupby("region_code")["intensity_kg_per_mwh"].mean() if not hourly_ci.empty else pd.Series(dtype=float)
+    for region in config.REGIONS:
+        e = (data.get("ev") or {}).get("regions", {}).get(region, {})
+        mid = (e.get("windows_90d") or {}).get("midday")
+        out[region] = {
+            "battery_net_peak": (data["net"].get(region) or {}).get("recent_30d"),
+            "rte": (data["battery"].get(region) or {}).get("rte_recent"),
+            "carbon": None if region not in avg_ci.index or pd.isna(avg_ci[region]) else round(float(avg_ci[region]), 1),
+            "ev_midday": None if mid is None else round(mid * data["ev"]["default_kwh_per_mile"], 1),
+            "cooling": temps[region]["cooling_mw_per_f"],
+            "heating": temps[region]["heating_mw_per_f"],
+        }
+    return out
+
+
 def insights(data: dict) -> dict:
     """Plain-English takeaways per region, regenerated on every build from the numbers above."""
     out = {}
@@ -183,6 +201,9 @@ def insights(data: dict) -> dict:
             lines.append(f"An EV charged at midday emits about {e['windows_90d']['midday'] * kpm:.0f} g CO₂ per mile here, "
                          f"vs {e['windows_90d']['evening'] * kpm:.0f} g if charged in the evening and "
                          f"{data['ev']['gas_g_per_mile']:.0f} g for an average gas car.")
+        t = (data.get("weather") or {}).get(region) or {}
+        if t.get("cooling_mw_per_f"):
+            lines.append(f"On hot days, every extra °F in {t['city']} adds about {t['cooling_mw_per_f']:,.0f} MW to peak demand.")
         b = data["battery"].get(region)
         if b and b.get("rte_recent") is not None:
             lines.append(f"Fleet round-trip efficiency averaged {b['rte_recent']}% over the last three months.")
@@ -211,6 +232,8 @@ def build(db_path: Path) -> Path:
                                   WHERE r.run_id IN (SELECT run_id FROM pipeline_runs ORDER BY run_id DESC LIMIT 30)
                                   ORDER BY r.run_id""")
         recs = {reg: battery.records(conn, reg) for reg in config.REGIONS}
+        temps = {reg: weather.demand_temperature(conn, reg) for reg in config.REGIONS}
+        inter = {reg: stats.interchange_profile(conn, reg) for reg in config.REGIONS}
         runs = q(conn, "SELECT run_id, started_at, window_start, window_end, rows_loaded, status, "
                        "error_message FROM pipeline_runs ORDER BY run_id DESC LIMIT 20")
         data = {
@@ -232,6 +255,9 @@ def build(db_path: Path) -> Path:
             "ev": ev.payload(hourly_ci) if not hourly_ci.empty else {"regions": {}},
         }
         add_extra_records(data, hourly_ci, net)
+        data["weather"] = temps
+        data["interchange"] = inter
+        data["league"] = stats.league_table(conn, league_extras(data, hourly_ci, temps))
         data["insights"] = insights(data)
     finally:
         conn.close()

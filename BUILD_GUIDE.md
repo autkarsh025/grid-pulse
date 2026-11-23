@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `48 passed`.
+**Checkpoint:** `54 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -129,6 +129,15 @@ The first real run showed no battery data for California, even though CAISO has 
 - **Caveats to say yourself:** tailpipe-only vs. power-plant-only (both skip upstream), and average rather than marginal intensity.
 - **Why Tesla cares:** the same logic drives scheduled/off-peak charging, Powerwall charge-from-solar, and fleet charging that follows grid signals.
 
+**Know it cold (scaling to 7 grids + weather):**
+- **Config-driven:** grids, time zones, demand ceilings and weather cities all live in `config.py`. Going from 2 grids to 7 changed configuration, not pipeline code. That's the design goal.
+- **Two sources, one join:** grid data (EIA) and weather (Open-Meteo) are joined on `(region_code, period_utc)`. Both are stored in UTC, which is what makes the join trivial.
+- **Enrichment vs. core:** if weather fails, the run continues (logged warning). If grid data fails a quality check, the run stops. Be ready to say *why* they're treated differently.
+- **Archive lag:** Open-Meteo's archive trails real time by several days, so recent days come from its forecast API and are overwritten by archive values on later runs, thanks to upserts.
+- **Heat/cold sensitivity:** a least-squares slope of daily peak demand vs. daily high (hot days ≥ 75°F) or low (cold days ≤ 45°F). It's simple, explainable and comparable across grids. A better model would fit a piecewise ("hockey stick") curve and control for weekday/weekend.
+- **Reconciliation check:** demand ≈ net generation − interchange. Three independently reported numbers must agree; a gap means a broken feed. It's a warning, not an error, because small reporting gaps are normal.
+- **Migrations:** `load.migrate()` adds new columns to an existing database. `CREATE TABLE IF NOT EXISTS` won't, which is a classic gotcha.
+
 **Know it cold (`carbon.py`):**
 - **Intensity** = Σ(generation × emission factor) / Σ generation for each hour. Factors come from EIA: coal ≈ 2,257 lb/MWh, gas ≈ 976 lb/MWh, renewables and nuclear 0.
 - **Why batteries are excluded:** a battery has no fuel. Its emissions belong to whatever charged it. Counting its discharge as zero-carbon generation would double-count the solar that charged it.
@@ -211,7 +220,7 @@ git push -u origin main
 ### Résumé bullets (fill in only with your real numbers)
 **Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
 - Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across 2 grid regions into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 48 pytest tests and per-run logging.
+- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 54 pytest tests and per-run logging.
 - Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
 
 [N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`

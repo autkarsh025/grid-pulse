@@ -78,3 +78,16 @@ def test_freshness(batch, isolated_data_dir):
     assert quality.check_freshness(conn, now=fresh_now).passed
     assert not quality.check_freshness(conn, now=stale_now).passed
     conn.close()
+
+
+def test_energy_balance_passes_when_books_balance(batch):
+    d, _ = batch
+    assert quality.check_balance(d).passed
+
+
+def test_energy_balance_flags_a_broken_feed(batch):
+    d, _ = batch
+    d = d.copy()
+    d["net_generation_mwh"] = d["net_generation_mwh"] * 1.2  # generation feed inflated 20%
+    r = quality.check_balance(d)
+    assert not r.passed and r.severity == "warn"

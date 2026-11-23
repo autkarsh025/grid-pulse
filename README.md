@@ -1,8 +1,8 @@
-# grid-pulse ⚡ U.S. grid & battery-storage data pipeline
+# grid-pulse ⚡ U.S. grid, battery-storage & EV data pipeline
 
-An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, estimates grid carbon intensity, and publishes a self-updating interactive dashboard on how batteries cover solar's evening drop-off in **California (CAISO)** and **Texas (ERCOT)**.
+An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, estimates grid carbon intensity, and publishes a self-updating interactive dashboard on how batteries cover solar's evening drop-off across **all seven major U.S. power grids** (CAISO, ERCOT, PJM, MISO, SPP, NYISO, ISO-NE), joined with hourly weather.
 
-**[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)**: auto-written takeaways, an **EV charging carbon calculator**, records, a year-long battery dispatch heatmap, round-trip efficiency, carbon intensity, anomaly explorer and run-by-run data-quality history, with light/dark mode and CSV downloads. · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
+**[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)**: auto-written takeaways, a **7-grid comparison table**, demand-vs-temperature and import/export analysis, an **EV charging carbon calculator**, records, a year-long battery dispatch heatmap, round-trip efficiency, carbon intensity, anomaly explorer and run-by-run data-quality history, with light/dark mode and CSV downloads. · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
 
 ![Average day in CAISO and ERCOT: demand, solar, and batteries charging midday and discharging in the evening](docs/img/duck_curve.png)
 
@@ -53,7 +53,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 48 tests, no API key needed
+pytest -q                                              # 54 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -83,6 +83,12 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **EV charging carbon.** Grid intensity in kg CO₂/MWh equals g CO₂/kWh, so an EV's g CO₂/mile = hourly grid intensity × the car's kWh/mile (`src/ev.py`). Compared with EPA's gas-car baseline (8,887 g CO₂/gallon ÷ 22.2 mpg ≈ 400 g/mile), it shows how much cleaner an EV is depending on *when* it charges, plus a calculator and the cleanest charging hours of the past week.
 
+**Seven grids, two data sources.** The pipeline covers the seven U.S. ISOs/RTOs (config-driven: adding a grid is one line in `src/config.py`). Hourly temperature for each grid's load-center city comes from Open-Meteo (`src/weather.py`) and is joined to demand by hour, giving each grid's heat and cold sensitivity (MW per °F, from least-squares fits on hot and cold days). Weather is treated as *enrichment*: if that API fails, the run logs a warning and the grid data still loads.
+
+**Reconciliation check.** Each grid reports demand, net generation and interchange separately; demand should equal generation minus exports. `quality.check_balance` flags batches where the books don't balance, a classic cross-field data-engineering check.
+
+**Schema migrations.** New columns are added to existing databases by `load.migrate()` (`CREATE TABLE IF NOT EXISTS` never alters a table), so old databases upgrade in place.
+
 **Alerting.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently.
 
 **Raw data kept.** API responses are saved untouched before transforming, so a transform bug can be fixed and replayed without re-downloading.
@@ -102,7 +108,7 @@ From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records).
 ## Repo layout
 
 ```
-src/        extract, transform, quality, load, anomalies, carbon, battery, ev, pipeline (CLI), config
+src/        extract, transform, quality, load, anomalies, carbon, battery, ev, weather, stats, pipeline (CLI), config
 sql/        schema.sql + analysis queries (CTEs, window functions)
 dags/       Airflow DAG: extract >> transform >> quality >> load >> detect_anomalies
 analysis/   charts and dashboard builder

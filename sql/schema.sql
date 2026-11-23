@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS hourly_demand (
     period_utc    TEXT NOT NULL,            -- start of the hour, UTC
     demand_mwh    REAL,                     -- actual demand
     forecast_mwh  REAL,                     -- EIA day-ahead demand forecast
+    net_generation_mwh REAL,                -- generation inside the grid
+    interchange_mwh    REAL,                -- + net exports / - net imports
     updated_at    TEXT NOT NULL,            -- when this row was last written
     PRIMARY KEY (region_code, period_utc)
 );
@@ -34,6 +36,15 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     rows_loaded    INTEGER DEFAULT 0,
     status         TEXT NOT NULL,           -- 'running' / 'success' / 'failed'
     error_message  TEXT
+);
+
+-- Hourly temperature at each grid's load-center city (Open-Meteo), joined to demand.
+CREATE TABLE IF NOT EXISTS weather_hourly (
+    region_code  TEXT NOT NULL REFERENCES regions(region_code),
+    period_utc   TEXT NOT NULL,
+    temp_f       REAL,
+    updated_at   TEXT NOT NULL,
+    PRIMARY KEY (region_code, period_utc)
 );
 
 -- Every data-quality check result for every run: the pipeline's observability history.

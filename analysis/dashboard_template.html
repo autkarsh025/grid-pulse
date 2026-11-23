@@ -11,7 +11,8 @@
     color-scheme: dark;
     --page: #121211; --surface-1: #1a1a19; --surface-2: #232321; --border: #2e2e2b;
     --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8d8c84;
-    --region-CISO: #3987e5; --region-ERCO: #d95926;
+    --region-CISO: #3987e5; --region-ERCO: #d95926; --region-PJM: #199e70; --region-MISO: #c98500;
+    --region-SWPP: #d55181; --region-NYIS: #0ca30c; --region-ISNE: #9085e9;
     --battery: #199e70; --solar: #c98500; --wind: #3987e5; --hydro: #0ca30c; --nuclear: #9085e9;
     --gas: #d55181; --coal: #e66767; --oil: #d95926;
     --div-neg: #3987e5; --div-mid: #383835; --div-pos: #e66767;
@@ -22,7 +23,8 @@
     color-scheme: light;
     --page: #f4f4f2; --surface-1: #fcfcfb; --surface-2: #f0efec; --border: #e2e1dc;
     --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
-    --region-CISO: #2a78d6; --region-ERCO: #eb6834;
+    --region-CISO: #2a78d6; --region-ERCO: #eb6834; --region-PJM: #1baf7a; --region-MISO: #eda100;
+    --region-SWPP: #e87ba4; --region-NYIS: #008300; --region-ISNE: #6250d6;
     --battery: #1baf7a; --solar: #eda100; --wind: #2a78d6; --hydro: #008300; --nuclear: #6250d6;
     --gas: #e87ba4; --coal: #e34948; --oil: #eb6834;
     --div-neg: #2a78d6; --div-mid: #f0efec; --div-pos: #e34948;
@@ -48,7 +50,7 @@
   .meta { color: var(--text-muted); font-size: 13px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
   .btn { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary); font: inherit; font-size: 13px;
-         padding: 5px 11px; border-radius: 8px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-decoration: none; }
+         padding: 5px 11px; border-radius: 8px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-decoration: none; white-space: nowrap; flex: none; }
   .btn:hover { color: var(--text-primary); background: var(--surface-2); }
 
   .insights { margin: 22px 0 0; background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--accent);
@@ -99,6 +101,15 @@
   .hours { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
   .hour-chip { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 4px 12px; font-size: 13.5px; }
   @media (max-width: 860px) { .calc { grid-template-columns: 1fr; } .calc .results { grid-template-columns: 1fr 1fr; } .bar-row { grid-template-columns: 110px 1fr 70px; } }
+
+  .league th { cursor: pointer; user-select: none; white-space: nowrap; }
+  .league th.sorted::after { content: " ▾"; color: var(--accent); }
+  .league th.sorted.asc::after { content: " ▴"; }
+  .league tr.sel td { background: var(--surface-2); color: var(--text-primary); }
+  .league tbody tr { cursor: pointer; }
+  .league td:first-child { white-space: nowrap; color: var(--text-primary); }
+  .league .best { color: var(--text-primary); font-weight: 650; }
+  #region-seg { flex-wrap: wrap; }
 
   .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin: 20px 0 14px; }
   .controls label { color: var(--text-muted); font-size: 13px; margin-right: 6px; }
@@ -176,7 +187,7 @@
         <h1>grid<span>-</span>pulse</h1>
       </div>
       <p class="tagline">An automated data pipeline on hourly U.S. grid data from the EIA. It validates, loads and analyzes the data
-        every morning to track how battery storage covers the evening peak in California and Texas.</p>
+        every morning to track how battery storage covers the evening peak across the seven major U.S. power grids.</p>
     </div>
     <div class="top-right">
       <div class="row">
@@ -190,7 +201,7 @@
 
   <details class="intro" id="intro" open>
     <summary><h2>What is this? Are batteries keeping the lights on after sunset?</h2><span class="hint">▾ hide</span></summary>
-    <p class="lede">California and Texas now get a huge share of their electricity from solar panels. That creates a daily problem, and giant batteries
+    <p class="lede">U.S. grids, led by California and Texas, now get a huge share of their electricity from solar panels. That creates a daily problem, and giant batteries
       are becoming the fix. This project <b>automatically collects the U.S. government’s hourly power-grid data every morning</b>, checks it, stores it,
       and measures how much batteries are actually helping.</p>
     <div class="steps">
@@ -204,8 +215,8 @@
         <p>Every morning, with no human involved, it downloads yesterday’s hourly data from the U.S. Energy Information Administration (EIA),
            runs quality checks, loads it into a SQL database, analyzes it and republishes this page.</p></div>
     </div>
-    <p class="howto"><b>How to read this page:</b> pick a grid (California or Texas) below. The <b>takeaways</b> and <b>headline numbers</b> summarize the latest data;
-      hover any <span class="info">i</span> for a definition. The tabs go deeper: <b>EV charging</b> (when an electric car is cleanest to charge, with a calculator), <b>Batteries</b> (how the fleet behaves), <b>Carbon & mix</b> (how clean the grid is),
+    <p class="howto"><b>How to read this page:</b> pick one of the seven grids below. The <b>takeaways</b> and <b>headline numbers</b> summarize the latest data;
+      hover any <span class="info">i</span> for a definition. The tabs go deeper: <b>Compare grids</b> (every stat side by side, plus weather and imports), <b>EV charging</b> (when an electric car is cleanest to charge, with a calculator), <b>Batteries</b> (how the fleet behaves), <b>Carbon & mix</b> (how clean the grid is),
       <b>Anomalies</b> (unusual readings the pipeline flagged) and <b>Data quality</b> (proof every load was checked). Terms are explained in the
       <a href="#glossary">glossary</a> at the bottom.</p>
   </details>
@@ -224,6 +235,7 @@
 
   <nav class="tabs" role="tablist" aria-label="Dashboard sections">
     <button role="tab" data-tab="overview">Overview</button>
+    <button role="tab" data-tab="compare">Compare grids</button>
     <button role="tab" data-tab="ev">EV charging ⚡</button>
     <button role="tab" data-tab="batteries">Batteries</button>
     <button role="tab" data-tab="carbon">Carbon & mix</button>
@@ -259,6 +271,38 @@
           <button class="btn" data-csv="err">⤓ CSV</button></div>
         <p class="lookfor">spikes are days the forecast missed badly, often heat waves or storms. Those are exactly the days batteries and spare capacity matter most.</p>
         <div class="chart" id="err"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="panel" id="tab-compare" role="tabpanel">
+    <div class="grid">
+      <div class="card wide">
+        <div class="card-head"><div><h2>Seven grids, side by side</h2>
+          <p class="desc">One row per grid, computed from the full year of data. Click a column header to sort; click a row to switch the whole page to that grid. A dash means the grid doesn’t report that data (for example, no separate battery category).</p></div>
+          <button class="btn" data-csv="league">⤓ CSV</button></div>
+        <p class="lookfor">compare California’s battery share of the net peak with grids that barely have batteries yet, or which grids lean on their neighbors for power (import hours). Bold = the leader in each column.</p>
+        <div class="scroll" style="max-height:none"><table class="league" id="league"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2 id="temp-title">Hotter days, higher demand</h2>
+          <p class="desc">Each dot is one day: that day’s peak electricity demand vs. the high temperature in the grid’s main city (weather from Open-Meteo, joined to grid data by hour).</p></div>
+          <button class="btn" data-csv="temp">⤓ CSV</button></div>
+        <p class="lookfor">the “V” shape: demand climbs on cold days (heating) and climbs faster on hot days (air conditioning). The line’s slope on hot days is how many extra megawatts each degree costs.</p>
+        <div class="chart" id="temp"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2 id="inter-title">Buying from the neighbors</h2>
+          <p class="desc">Average net power flow with neighboring grids by hour of day, last 90 days. Above zero = exporting, below zero = importing.</p></div>
+          <button class="btn" data-csv="inter">⤓ CSV</button></div>
+        <p class="lookfor">many grids export their midday solar surplus and import in the evening. Batteries let a grid keep more of its own solar for the evening instead of buying power then.</p>
+        <div class="chart" id="inter"></div>
+      </div>
+      <div class="card wide">
+        <div class="card-head"><div><h2>Who’s leading on batteries?</h2>
+          <p class="desc">Share of each day’s evening net peak covered by batteries, average of the last 30 days, by grid.</p></div></div>
+        <div class="chart" id="leaders"></div>
       </div>
     </div>
   </section>
@@ -439,6 +483,9 @@
       <div><dt>Data pipeline (ETL)</dt><dd>Software that automatically <b>E</b>xtracts data from a source, <b>T</b>ransforms (cleans) it and <b>L</b>oads it into a database, on a schedule.</dd></div>
       <div><dt>Data-quality check</dt><dd>An automatic test data must pass before it’s saved, like “no missing hours” or “demand can’t be negative.” Failing data is rejected, not stored.</dd></div>
       <div><dt>Anomaly</dt><dd>A reading far outside its normal range for that hour. Real events (heat waves, outages) and data glitches both show up.</dd></div>
+      <div><dt>ISO / RTO (the seven grids)</dt><dd>Independent organizations that run the power grid and wholesale market for a region: CAISO (California), ERCOT (Texas), PJM (13 Mid-Atlantic and Midwest states plus DC), MISO (the Midwest and parts of the South), SPP (the Great Plains), NYISO (New York) and ISO-NE (New England).</dd></div>
+      <div><dt>Interchange (imports / exports)</dt><dd>Power flowing between neighboring grids. A grid “imports” when it buys more than it sells in an hour.</dd></div>
+      <div><dt>Energy balance check</dt><dd>A data-quality test: demand should equal generation minus exports. Each grid reports all three separately, so a mismatch reveals a broken data feed.</dd></div>
       <div><dt>g CO₂ per mile</dt><dd>How much carbon dioxide is released per mile driven: from the tailpipe for a gas car, from power plants for an EV. An average gas car emits about 400.</dd></div>
       <div><dt>EIA</dt><dd>The U.S. Energy Information Administration, the federal agency that publishes this hourly grid data for free.</dd></div>
     </dl>
@@ -454,7 +501,7 @@
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const regions = Object.keys(D.regions);
-const NAME = { CISO: 'California', ERCO: 'Texas' };
+const NAME = { CISO: 'California', ERCO: 'Texas', PJM: 'Mid-Atlantic', MISO: 'Midwest', SWPP: 'Great Plains', NYIS: 'New York', ISNE: 'New England' };
 const state = { region: regions[0], metric: 'battery', tab: 'overview', rendered: new Set() };
 const cfg = { displayModeBar: false, responsive: true };
 const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -523,6 +570,9 @@ const CSV = {
   mix: () => download('fuel_mix', ['region', 'month', 'fuel', 'share_pct'], D.mix.region_code.map((r, i) => [r, D.mix.month[i], D.mix.fuel_type[i], D.mix.share_pct[i]])),
   ev: () => { const e = D.ev.regions[state.region], k = evInputs().kpm;
     download(`ev_${state.region}`, ['local_hour', 'grid_g_per_kwh_90d', 'ev_g_per_mile_90d', 'gas_g_per_mile'], e.hour.map((h, i) => [h, e.g_per_kwh_90d[i], e.g_per_kwh_90d[i] == null ? '' : (e.g_per_kwh_90d[i] * k).toFixed(1), D.ev.gas_g_per_mile])); },
+  league: () => download('league_table', LEAGUE_COLS.map(c => c[1]), D.league.map(r => LEAGUE_COLS.map(c => r[c[0]]))),
+  temp: () => { const t = D.weather[state.region]; download(`demand_vs_temp_${state.region}`, ['day', 'peak_demand_mw', 'max_temp_f', 'min_temp_f'], t.days.map((d, i) => [d, t.peak_mw[i], t.tmax[i], t.tmin[i]])); },
+  inter: () => download('interchange_by_hour', ['region', 'local_hour', 'net_exports_gw'], regions.flatMap(r => (D.interchange[r] || { hour: [] }).hour.map((h, i) => [r, h, D.interchange[r].gw[i]]))),
   quality: () => download('quality_checks', ['run_id', 'window_start', 'window_end', 'check', 'passed', 'severity', 'detail'], D.quality.map(q => [q.run_id, q.window_start, q.window_end, q.check_name, q.passed, q.severity, q.detail])),
 };
 document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => CSV[b.dataset.csv]());
@@ -592,9 +642,76 @@ function renderErr() {
   const e = D.err;
   const traces = regions.map(r => { const idx = byRegion(e, r);
     return { x: idx.map(i => e.day[i]), y: idx.map(i => e.mape_7d_avg_pct[i]), name: r, type: 'scatter', mode: 'lines',
-             line: { color: regionColor(r), width: 2 }, hovertemplate: '%{y:.2f}%' }; });
+             line: { color: regionColor(r), width: r === state.region ? 3 : 1.2 }, opacity: r === state.region ? 1 : 0.45, hovertemplate: '%{y:.2f}%' }; });
   Plotly.react('err', traces, baseLayout({ xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: '% error', rangemode: 'tozero' } }), cfg);
 }
+
+// ---------- COMPARE
+const LEAGUE_COLS = [
+  ['name', 'Grid', null], ['avg_demand_gw', 'Avg demand (GW)', 'max'], ['peak_demand_gw', 'Peak demand (GW)', 'max'],
+  ['solar_share', 'Solar share %', 'max'], ['wind_share', 'Wind share %', 'max'], ['battery_net_peak', 'Batteries at net peak %', 'max'],
+  ['rte', 'Battery efficiency %', 'max'], ['carbon', 'Avg kg CO₂/MWh', 'min'], ['ev_midday', 'EV midday g/mi', 'min'],
+  ['import_hours', 'Hours importing %', null], ['cooling', 'MW per °F hotter', null], ['heating', 'MW per °F colder', null], ['mape', 'Forecast error %', 'min'],
+];
+const LEAGUE_TIPS = {
+  battery_net_peak: 'Share of the evening net-peak hour (demand minus solar and wind) supplied by batteries, last 30 days.',
+  rte: 'Energy out of batteries ÷ energy in, last 3 months.', carbon: 'Average carbon intensity of generation over the year.',
+  ev_midday: 'CO₂ per mile for an EV (0.28 kWh/mi) charged 10 AM–3 PM, last 90 days.',
+  import_hours: 'Share of hours the grid was a net importer from its neighbors.',
+  cooling: 'Extra peak demand per °F on hot days (high ≥ 75°F) in the main city.', heating: 'Extra peak demand per °F colder on cold days (low ≤ 45°F).',
+  mape: 'Average gap between the day-ahead demand forecast and actual demand.',
+};
+state.sort = { key: 'battery_net_peak', dir: -1 };
+function renderLeague() {
+  const rows = [...(D.league || [])], k = state.sort.key;
+  rows.sort((a, b) => (a[k] == null) - (b[k] == null) || (k === 'name' ? a.name.localeCompare(b.name) * state.sort.dir : (b[k] - a[k]) * -state.sort.dir * -1));
+  const best = {};
+  LEAGUE_COLS.forEach(([key, , rule]) => { if (!rule) return; const vals = rows.map(r => r[key]).filter(v => v != null); if (vals.length) best[key] = rule === 'max' ? Math.max(...vals) : Math.min(...vals); });
+  const head = `<thead><tr>${LEAGUE_COLS.map(([key, label]) => `<th class="${key === 'name' ? '' : 'num'} ${key === k ? 'sorted' + (state.sort.dir > 0 ? ' asc' : '') : ''}" data-key="${key}" title="${esc(LEAGUE_TIPS[key] || label)}">${label}</th>`).join('')}</tr></thead>`;
+  const body = rows.map(r => `<tr data-region="${r.region}" class="${r.region === state.region ? 'sel' : ''}">${LEAGUE_COLS.map(([key]) => key === 'name'
+      ? `<td><span class="dot" style="background:${regionColor(r.region)}"></span> ${esc(NAME[r.region] || r.region)} <span class="meta">${r.region}</span></td>`
+      : `<td class="num ${best[key] != null && r[key] === best[key] ? 'best' : ''}">${fmt(r[key], key === 'mape' ? 2 : 1)}</td>`).join('')}</tr>`).join('');
+  const t = document.getElementById('league');
+  t.innerHTML = head + '<tbody>' + body + '</tbody>';
+  t.querySelectorAll('th').forEach(th => th.onclick = () => {
+    const key = th.dataset.key; state.sort = { key, dir: state.sort.key === key ? -state.sort.dir : (key === 'name' ? 1 : -1) }; renderLeague(); });
+  t.querySelectorAll('tbody tr').forEach(tr => tr.onclick = () => selectRegion(tr.dataset.region));
+}
+function renderTemp() {
+  const r = state.region, t = (D.weather || {})[r];
+  document.getElementById('temp-title').textContent = `Hotter days, higher demand · ${NAME[r]}${t && t.city ? ' (' + t.city + ')' : ''}`;
+  if (!t || !t.days.length) return empty('temp', 'Weather data appears after the next pipeline run.');
+  const traces = [{ x: t.tmax, y: t.peak_mw.map(v => v / 1000), text: t.days, type: 'scatter', mode: 'markers', name: 'One day',
+    marker: { color: regionColor(r), size: 7, opacity: 0.7, line: { color: C.surface, width: 1 } }, hovertemplate: '%{text}<br>High %{x:.0f}°F · peak %{y:.1f} GW<extra></extra>' }];
+  if (t.cooling_mw_per_f != null) {
+    const hot = t.tmax.map((x, i) => [x, t.peak_mw[i]]).filter(([x]) => x >= 75);
+    const mx = hot.reduce((s, p) => s + p[0], 0) / hot.length, my = hot.reduce((s, p) => s + p[1], 0) / hot.length;
+    const x0 = 75, x1 = Math.max(...hot.map(p => p[0]));
+    traces.push({ x: [x0, x1], y: [x0, x1].map(x => (my + t.cooling_mw_per_f * (x - mx)) / 1000), type: 'scatter', mode: 'lines',
+      name: `+${fmt(t.cooling_mw_per_f)} MW per °F`, line: { color: C.text, width: 2.5, dash: 'dash' }, hoverinfo: 'skip' });
+  }
+  Plotly.react('temp', traces, baseLayout({ hovermode: 'closest', xaxis: { gridcolor: C.border, title: 'Daily high temperature (°F)' },
+    yaxis: { gridcolor: C.border, title: 'Daily peak demand (GW)' } }), cfg);
+}
+function renderInter() {
+  const r = state.region, p = (D.interchange || {})[r];
+  document.getElementById('inter-title').textContent = `Buying from the neighbors · ${NAME[r]}`;
+  if (!p || !p.hour.length) return empty('inter');
+  Plotly.react('inter', [{ x: p.hour, y: p.gw, type: 'bar', name: 'Net exports (+) / imports (−)',
+    marker: { color: p.gw.map(v => v == null ? C.muted : v >= 0 ? C.divPos : C.divNeg) }, hovertemplate: '%{y:+.2f} GW<extra></extra>' }],
+    baseLayout({ bargap: 0.2, showlegend: false, xaxis: { gridcolor: C.border, title: 'Local hour of day', dtick: 3 },
+                 yaxis: { gridcolor: C.border, title: 'GW (+ export / − import)', zerolinecolor: C.muted } }), cfg);
+}
+function renderLeaders() {
+  const rows = (D.league || []).filter(r => r.battery_net_peak != null).sort((a, b) => a.battery_net_peak - b.battery_net_peak);
+  if (!rows.length) return empty('leaders');
+  Plotly.react('leaders', [{ y: rows.map(r => NAME[r.region] || r.region), x: rows.map(r => r.battery_net_peak), type: 'bar', orientation: 'h',
+    marker: { color: rows.map(r => regionColor(r.region)) }, text: rows.map(r => r.battery_net_peak + '%'), textposition: 'outside',
+    textfont: { color: C.sec }, hovertemplate: '%{x:.1f}%<extra></extra>' }],
+    baseLayout({ hovermode: 'closest', showlegend: false, margin: { l: 150, r: 40, t: 10, b: 40 },
+                 xaxis: { gridcolor: C.border, title: '% of evening net peak covered by batteries', rangemode: 'tozero' }, yaxis: { gridcolor: 'rgba(0,0,0,0)' } }), cfg);
+}
+function renderCompare() { renderLeague(); renderTemp(); renderInter(); renderLeaders(); }
 
 // ---------- EV
 const hourLabel = h => `${(h % 12) || 12} ${h < 12 ? 'AM' : 'PM'}`;
@@ -669,22 +786,24 @@ function renderHeat() {
 }
 function renderRte() {
   const traces = regions.filter(r => D.battery && D.battery[r]).map(r => ({ x: D.battery[r].rte.month, y: D.battery[r].rte.pct, name: r,
-    type: 'scatter', mode: 'lines+markers', line: { color: regionColor(r), width: 2 }, marker: { size: 8 }, hovertemplate: '%{y:.1f}%' }));
+    type: 'scatter', mode: 'lines+markers', line: { color: regionColor(r), width: r === state.region ? 3 : 1.2 }, opacity: r === state.region ? 1 : 0.45,
+    marker: { size: r === state.region ? 8 : 4 }, hovertemplate: '%{y:.1f}%' }));
   if (!traces.length) return empty('rte');
   Plotly.react('rte', traces, baseLayout({ yaxis: { gridcolor: C.border, title: '% returned', range: [0, 110] },
     shapes: [{ type: 'rect', xref: 'paper', x0: 0, x1: 1, y0: 80, y1: 90, fillcolor: C.good, opacity: 0.08, line: { width: 0 } }] }), cfg);
 }
 function renderFph() {
   const traces = regions.filter(r => D.battery && D.battery[r]).map(r => ({ x: D.battery[r].fph.day, y: D.battery[r].fph.hours_7d, name: r,
-    type: 'scatter', mode: 'lines', line: { color: regionColor(r), width: 2 }, hovertemplate: '%{y:.2f} h' }));
+    type: 'scatter', mode: 'lines', line: { color: regionColor(r), width: r === state.region ? 3 : 1.2 }, opacity: r === state.region ? 1 : 0.45, hovertemplate: '%{y:.2f} h' }));
   if (!traces.length) return empty('fph');
   Plotly.react('fph', traces, baseLayout({ xaxis: dateAxis(''), yaxis: { gridcolor: C.border, title: 'hours', rangemode: 'tozero' } }), cfg);
 }
 function renderMonthly() {
   const m = D.monthly;
-  const traces = regions.map(r => { const idx = byRegion(m, r);
-    return { x: idx.map(i => m.month[i]), y: idx.map(i => m.discharge_mwh[i] == null ? null : m.discharge_mwh[i] / 1e6), name: r,
+  const traces = [state.region].map(r => { const idx = byRegion(m, r);
+    return { x: idx.map(i => m.month[i]), y: idx.map(i => m.discharge_mwh[i] == null ? null : m.discharge_mwh[i] / 1e6), name: NAME[r] || r,
              type: 'bar', marker: { color: regionColor(r) }, hovertemplate: '%{y:,.2f} TWh' }; });
+  if (!traces[0].x.length) return empty('monthly', 'No separate battery data reported for this grid.');
   Plotly.react('monthly', traces, baseLayout({ barmode: 'group', bargap: 0.25, yaxis: { gridcolor: C.border, title: 'TWh', rangemode: 'tozero' } }), cfg);
 }
 function renderPeaks() {
@@ -774,6 +893,7 @@ function renderQuality() {
 // ---------- tabs and orchestration
 const TABS = {
   overview: [renderDuck, renderNet, renderRecords, renderErr],
+  compare: [renderCompare],
   ev: [renderEv],
   batteries: [renderHeat, renderRte, renderFph, renderMonthly, renderPeaks],
   carbon: [renderCarbon, renderMix],
@@ -800,9 +920,15 @@ function segmented(el, items, key, onChange) {
     el.appendChild(b);
   });
 }
+function selectRegion(r) {
+  state.region = r;
+  segmented(document.getElementById('region-seg'), regions.map(x => [x, `${NAME[x] || x} <span style="color:var(--text-muted);font-size:12px">${x}</span>`, regionColor(x)]), 'region', onRegion);
+  onRegion();
+}
+function onRegion() { renderInsights(); renderKpis(); state.rendered.clear(); showTab(state.tab); }
 function renderAll() {
   renderHeader(); renderInsights(); renderKpis();
-  segmented(document.getElementById('region-seg'), regions.map(r => [r, `${NAME[r] || r} <span style="color:var(--text-muted);font-size:12px">${r}</span>`, regionColor(r)]), 'region', () => { renderInsights(); renderKpis(); state.rendered.clear(); showTab(state.tab); });
+  segmented(document.getElementById('region-seg'), regions.map(r => [r, `${NAME[r] || r} <span style="color:var(--text-muted);font-size:12px">${r}</span>`, regionColor(r)]), 'region', onRegion);
   segmented(document.getElementById('metric-seg'), [['battery', 'Battery'], ['demand', 'Demand'], ['solar', 'Solar']], 'metric', renderAnomalies);
   showTab(state.tab);
 }

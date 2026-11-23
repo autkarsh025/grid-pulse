@@ -79,6 +79,21 @@ def check_demand_range(df: pd.DataFrame) -> CheckResult:
     return CheckResult("demand_range", not problems, "; ".join(problems) or "all values in range")
 
 
+def check_balance(df: pd.DataFrame, max_gap: float = config.MAX_BALANCE_GAP) -> CheckResult:
+    """Reconciliation: demand should equal net generation minus interchange (exports).
+    Three numbers reported separately by each grid must agree; a gap means a broken feed."""
+    cols = {"demand_mwh", "net_generation_mwh", "interchange_mwh"}
+    if not cols <= set(df.columns) or df[list(cols)].dropna().empty:
+        return CheckResult("energy_balance", True, "net generation / interchange not in batch", "warn")
+    problems = []
+    for region, r in df.dropna(subset=list(cols)).groupby("region_code"):
+        gap = ((r["net_generation_mwh"] - r["interchange_mwh"] - r["demand_mwh"]).abs() / r["demand_mwh"].abs()).median()
+        if gap > max_gap:
+            problems.append(f"{region}: median gap {gap:.1%}")
+    return CheckResult("energy_balance", not problems,
+                       "; ".join(problems) or f"demand = generation - exports within {max_gap:.0%}", "warn")
+
+
 def check_solar_at_night(gen: pd.DataFrame) -> CheckResult:
     """Solar output between midnight and 4am local time should be near zero."""
     solar = gen[gen["fuel_type"] == config.SOLAR_CODE]
@@ -110,6 +125,7 @@ def run_batch_checks(demand: pd.DataFrame, generation: pd.DataFrame,
         check_null_share(generation, "generation_mwh", "generation"),
         check_completeness(demand, start, end),
         check_demand_range(demand),
+        check_balance(demand),
         check_solar_at_night(generation),
     ]
 

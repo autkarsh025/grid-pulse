@@ -16,10 +16,11 @@ def hours(start: date, end: date):
 def fake_demand_records(start: date, end: date, regions=("CISO", "ERCO")) -> list[dict]:
     rows = []
     for region in regions:
-        base = 25_000 if region == "CISO" else 45_000
+        base = 25_000 if region == "CISO" else 30_000
         for t in hours(start, end):
             demand = base + 5_000 * math.sin((t.hour - 8) / 24 * 2 * math.pi)
-            for typ, val in (("D", demand), ("DF", demand * 1.02)):
+            exports = 500.0  # fake grid exports 500 MWh every hour: NG = D + TI
+            for typ, val in (("D", demand), ("DF", demand * 1.02), ("NG", demand + exports), ("TI", exports)):
                 rows.append({
                     "period": t.strftime("%Y-%m-%dT%H"), "respondent": region,
                     "respondent-name": region, "type": typ, "type-name": typ,
