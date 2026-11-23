@@ -61,8 +61,11 @@ def detect_spikes(series: pd.DataFrame, tz: str) -> pd.DataFrame:
         return g.assign(expected=med, mad=mad)
 
     df = pd.concat([baseline(g) for _, g in df.groupby("local_hour")])
-    # Floor the spread so perfectly regular data (MAD = 0) doesn't divide by zero.
-    floor = (df["expected"].abs() * 0.01).clip(lower=1.0)
+    # Floor the spread so tiny absolute wiggles don't score as huge outliers. Without this,
+    # solar at night (expected 0, MAD 0) turned a 28 MWh reading into "z = 19". The floor is
+    # the larger of 5% of the expected value and 2% of the series' typical peak (99th percentile).
+    scale = float(df["value"].abs().quantile(0.99)) or 1.0
+    floor = (df["expected"].abs() * 0.05).clip(lower=max(0.02 * scale, 1.0))
     spread = df["mad"].where(df["mad"] > floor, floor)
     df["score"] = 0.6745 * (df["value"] - df["expected"]) / spread
     hits = df[df["score"].abs() >= Z_THRESHOLD].copy()

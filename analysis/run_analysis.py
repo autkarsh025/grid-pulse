@@ -95,6 +95,22 @@ def print_headlines(monthly: pd.DataFrame, peaks: pd.DataFrame, err: pd.DataFram
               f"worst day {worst.day} at {worst.mape_pct:.1f}%")
 
 
+def print_fuel_profile(conn: sqlite3.Connection) -> None:
+    """Data profile: what each fuel code looks like in each region. A fuel that goes negative
+    midday and positive in the evening is behaving like batteries, whatever it's called."""
+    gen = pd.read_sql_query("SELECT region_code, period_utc, fuel_type, generation_mwh FROM hourly_generation", conn)
+    print("\n=== Fuel profile (avg MWh at local noon vs 7pm, share of negative hours) ===")
+    for region, r in gen.groupby("region_code"):
+        r = r.copy()
+        r["h"] = pd.to_datetime(r["period_utc"], utc=True).dt.tz_convert(config.REGION_TZ.get(region, "UTC")).dt.hour
+        for fuel, f in r.groupby("fuel_type"):
+            noon = f.loc[f["h"] == 12, "generation_mwh"].mean()
+            eve = f.loc[f["h"] == 19, "generation_mwh"].mean()
+            neg = (f["generation_mwh"] < 0).mean()
+            print(f"{region} {fuel:>4}: rows {len(f):>6,}  noon {noon:>9,.0f}  7pm {eve:>9,.0f}  "
+                  f"negative {neg:>5.1%}  min {f['generation_mwh'].min():>9,.0f}  max {f['generation_mwh'].max():>9,.0f}")
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=config.DB_PATH)
@@ -120,6 +136,7 @@ def main(argv=None) -> None:
     conn = sqlite3.connect(args.db)
     try:
         shift = carbon.battery_shift(carbon.hourly_intensity(conn))
+        print_fuel_profile(conn)
     finally:
         conn.close()
     shift.to_csv(OUT_DIR / "battery_co2_shift.csv", index=False)
