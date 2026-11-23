@@ -39,3 +39,12 @@ def test_dashboard_builds_with_valid_json(loaded_db, tmp_path, monkeypatch):
     data = json.loads(payload.replace("<\\/", "</"))  # strict JSON parse: NaN would fail here
     assert "NaN" not in payload
     assert set(data) >= {"kpi", "duck", "carbon", "mix", "net", "anomalies", "runs"}
+
+
+def test_unreported_fuel_is_none_not_zero():
+    from src import load, stats, transform
+    conn = load.connect(); load.init_db(conn)
+    load.load_batch(conn, transform.transform_demand(fake_demand_records(date(2026, 8, 1), date(2026, 8, 3))).df,
+                    transform.transform_generation(fake_generation_records(date(2026, 8, 1), date(2026, 8, 3))).df)
+    rows = {r["region"]: r for r in stats.league_table(conn, {})}
+    assert rows["CISO"]["solar_share"] is not None and rows["CISO"]["wind_share"] is None  # fakes have no wind

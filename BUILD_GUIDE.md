@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `56 passed`.
+**Checkpoint:** `57 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -137,6 +137,7 @@ The first real run showed no battery data for California, even though CAISO has 
 - **Heat/cold sensitivity:** a least-squares slope of daily peak demand vs. daily high (hot days ≥ 75°F) or low (cold days ≤ 45°F). It's simple, explainable and comparable across grids. A better model would fit a piecewise ("hockey stick") curve and control for weekday/weekend.
 - **Reconciliation check:** demand ≈ net generation − interchange. Three independently reported numbers must agree; a gap means a broken feed. It's a warning, not an error, because small reporting gaps are normal.
 - **Quarantine (third data story):** the first 7-grid run refused a whole month of New York data because of 6 impossible hourly values. Rejecting 700 good hours for 6 bad ones is too blunt, so impossible values now go to a `quarantine` table (with the reason) and the rest loads. The batch still fails if more than 1% needs quarantining, because at that point the feed itself is broken. This is the "dead-letter queue" pattern from streaming systems.
+- **None vs. zero:** PJM and NYISO report no battery category, and NYISO reports no utility solar. The first version showed those as **0%**, which is wrong: it's *unknown*, not zero. Unreported data is now `None` and shows as a dash. Interviewers love this distinction (NULL semantics).
 - **Migrations:** `load.migrate()` adds new columns to an existing database. `CREATE TABLE IF NOT EXISTS` won't, which is a classic gotcha.
 
 **Know it cold (`carbon.py`):**
@@ -220,8 +221,8 @@ git push -u origin main
 
 ### Résumé bullets (fill in only with your real numbers)
 **Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
-- Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across 2 grid regions into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 56 pytest tests and per-run logging.
+- Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across all 7 U.S. grid operators (plus hourly weather) into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
+- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 57 pytest tests and per-run logging.
 - Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
 
 [N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`

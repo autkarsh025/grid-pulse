@@ -109,10 +109,13 @@ def carbon_payload(hourly: pd.DataFrame, shift: pd.DataFrame) -> dict:
     return out
 
 
-def net_payload(net: pd.DataFrame) -> dict:
-    """Battery share of each day's net peak, smoothed with a 7-day rolling mean, per region."""
+def net_payload(net: pd.DataFrame, has_battery: set[str]) -> dict:
+    """Battery share of each day's net peak, smoothed with a 7-day rolling mean, per region.
+    Grids that report no battery category get no series (not a misleading line at 0%)."""
     out = {}
     for region, r in net.groupby("region_code"):
+        if region not in has_battery:
+            continue
         r = r.sort_values("day")
         share = pd.to_numeric(r["battery_share_of_net_peak_pct"], errors="coerce")
         roll = share.rolling(7, min_periods=3).mean().round(2)
@@ -224,6 +227,8 @@ def build(db_path: Path) -> Path:
         shift = carbon.battery_shift(hourly_ci) if not hourly_ci.empty else pd.DataFrame()
         mix = q(conn, (SQL_DIR / "05_fuel_mix_monthly.sql").read_text())
         net = q(conn, (SQL_DIR / "06_net_peak_battery_share.sql").read_text())
+        has_battery = {r for (r,) in conn.execute(
+            "SELECT DISTINCT region_code FROM hourly_generation WHERE fuel_type = ?", (config.BATTERY_CODE,))}
         rte = q(conn, (SQL_DIR / "07_battery_round_trip.sql").read_text())
         bat = battery.battery_hourly(conn)
         quality_hist = q(conn, """SELECT r.run_id, r.started_at, r.window_start, r.window_end, r.status,
@@ -248,7 +253,7 @@ def build(db_path: Path) -> Path:
             "runs": runs.to_dict(orient="records"),
             "carbon": carbon_payload(hourly_ci, shift),
             "mix": mix.to_dict(orient="list"),
-            "net": net_payload(net),
+            "net": net_payload(net, has_battery),
             "battery": battery_payload(bat, rte),
             "records": recs,
             "quality": quality_hist.to_dict(orient="records"),

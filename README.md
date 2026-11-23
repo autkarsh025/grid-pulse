@@ -53,7 +53,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 56 tests, no API key needed
+pytest -q                                              # 57 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -105,7 +105,8 @@ From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records).
 4. **Batteries move energy from clean hours to dirty ones.** CAISO batteries charge when the grid averages **76 kg CO₂/MWh** and discharge when it averages **176**. ERCOT: **253 → 373**. (Average-intensity estimate; see design notes.)
 5. **Efficiency is right where lithium-ion should be.** Fleet round-trip efficiency averaged **87.4% in CAISO** and **81.3% in ERCOT** over the last three months.
 6. **When an EV charges matters almost as much as being electric.** Using the last 90 days of grid data, an EV charged at midday in California emits about **27 g CO₂/mile**, vs **73 g** charged overnight; in Texas, **70 g** vs **104 g**. An average gas car emits about **400 g**. Surprisingly, overnight is the *dirtiest* time to charge in California: by then solar is gone and batteries have already discharged in the evening.
-7. **Two upstream data issues found and fixed:** CAISO reports no battery category to EIA (its batteries are inside "Other"), and ERCOT briefly reported battery charging as "unknown energy storage," which made one month's efficiency read an impossible 164%. Both are remapped in the transform, with tests.
+7. **Seven grids, very different stories** (full year, ~584K hourly records): California leads on solar (**31%** of generation) and batteries (**25%** of the evening net peak), and has the cleanest grid (**142 kg CO₂/MWh**). The Great Plains (SPP) is the wind leader (**38%**). The Midwest (MISO) is the most carbon-intensive (**427**). PJM is the most heat-sensitive: each extra °F on a hot day in Philadelphia adds about **2,050 MW** to peak demand. In Texas, cold costs nearly as much as heat (**~760 MW/°F colder**), the signature of electric heating.
+8. **Upstream data issues found and fixed:** CAISO reports no battery category to EIA (its batteries are inside "Other"); ERCOT briefly reported battery charging as "unknown energy storage," which made one month's efficiency read an impossible 164%; and NYISO sent 6 hours of zero demand, which are now quarantined instead of blocking a month of good data. All handled in the pipeline, with tests.
 
 ## Repo layout
 

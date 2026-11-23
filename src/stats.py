@@ -47,7 +47,9 @@ def league_table(conn: sqlite3.Connection, extras: dict) -> list[dict]:
         d = dem.loc[region] if region in dem.index else None
         m = mix[mix["region_code"] == region]
         total = m["mwh"].sum()
-        share = lambda code: _f(100 * m.loc[m["fuel_type"] == code, "mwh"].sum() / total) if total else None
+        # A fuel the grid doesn't report at all is None ("not reported"), never 0%.
+        share = lambda code: _f(100 * m.loc[m["fuel_type"] == code, "mwh"].sum() / total) \
+            if total and (m["fuel_type"] == code).any() else None
         e = extras.get(region, {})
         rows.append({
             "region": region, "name": name,
