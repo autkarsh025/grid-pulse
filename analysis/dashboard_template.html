@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>grid-pulse · U.S. grid & battery storage</title>
+<title>Sundown · When the sun sets, the batteries clock in</title>
 <meta name="description" content="An automated data pipeline tracking how battery storage covers the evening net peak in California and Texas, built on hourly EIA data.">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
@@ -184,9 +184,9 @@
         <div class="logo" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="var(--accent)"/></svg>
         </div>
-        <h1>grid<span>-</span>pulse</h1>
+        <h1>Sun<span>down</span></h1>
       </div>
-      <p class="tagline">An automated data pipeline on hourly U.S. grid data from the EIA. It validates, loads and analyzes the data
+      <p class="tagline"><b>When the sun sets, the batteries clock in.</b> An automated data pipeline on hourly U.S. grid data from the EIA. It validates, loads and analyzes the data
         every morning to track how battery storage covers the evening peak across the seven major U.S. power grids.</p>
     </div>
     <div class="top-right">
@@ -506,7 +506,7 @@
 
   <footer>
     Data: U.S. Energy Information Administration, Hourly Electric Grid Monitor (EIA-930), via the Open Data API v2. CAISO batteries are reported inside EIA's "Other" category and remapped by the pipeline.
-    <br>Built by Utkarsh Agarwal · <a href="https://github.com/autkarsh025/grid-pulse">Source on GitHub</a>
+    <br><b>Sundown</b> · built by Utkarsh Agarwal · <a href="https://github.com/autkarsh025/grid-pulse">Source on GitHub</a>
   </footer>
 </div>
 
@@ -570,7 +570,7 @@ const byRegion = (cols, r) => cols.region_code.map((x, i) => x === r ? i : -1).f
 function download(name, header, rows) {
   const q = v => v == null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
   const blob = new Blob([[header, ...rows].map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `grid-pulse_${name}.csv` });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `sundown_${name}.csv` });
   document.body.appendChild(a); a.click(); a.remove();
 }
 const CSV = {

@@ -1,4 +1,6 @@
-# grid-pulse build guide (your playbook)
+# 🌅 Sundown: build guide (your playbook)
+
+*When the sun sets, the batteries clock in.* (Repo name: `grid-pulse`; the GitHub URLs below keep that name.)
 
 This is your path from "zip on my laptop" to "live project on my résumé." Work through it in order. Each phase ends with a **checkpoint** (proof it works) and a **know it cold** list: the things you should be able to explain without looking. Interviewers will open your repo and ask about any line of it, so read every file as you go.
 
@@ -277,7 +279,7 @@ It prints each analysis query's runtime and SQLite execution plan. **Know it col
 ### Résumé bullets (fill in only with your real numbers)
 Tailored to Tesla's Energy data-engineering posting. Its keywords (pipelines, Airflow, Spark, data-quality checks, automated reporting, SQL) appear naturally. **Only keep "Airflow" after you've done Phase 6b yourself, and "Tableau" only after 6e.**
 
-**Grid-Pulse: U.S. Power Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, Spark, GitHub Actions | github.com/autkarsh025/grid-pulse
+**Sundown: U.S. Power Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, Spark, GitHub Actions | github.com/autkarsh025/grid-pulse
 - Built and deployed an automated ELT pipeline ingesting 580K+ hourly records from all 7 U.S. grid operators (EIA API) plus hourly weather into SQL, orchestrated with Airflow and scheduled daily via GitHub Actions; idempotent upserts, backfills, schema migrations and per-run logging.
 - Automated data-quality checks before every load (completeness, ranges, energy-balance reconciliation, freshness) with row-level quarantine and auto-filed failure alerts; found and fixed three upstream data issues, including CAISO batteries hidden in EIA's "Other" category.
 - Ported the core analysis to PySpark over a Parquet data lake partitioned by grid and month, validated day for day against SQL (2,545 region-days, 0 mismatches); 60 pytest tests in CI.

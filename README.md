@@ -1,4 +1,17 @@
-# grid-pulse ⚡ U.S. grid, battery-storage & EV data pipeline
+<div align="center">
+
+# 🌅 Sundown
+
+### When the sun sets, the batteries clock in.
+
+**An automated data pipeline and live dashboard measuring how grid-scale batteries carry America's seven power grids
+through solar's evening drop-off, with EV-charging carbon, anomalies and data-quality monitoring.**
+
+*(Repo: `grid-pulse`. Companion project: [⚡ Gigawatt Ledger](https://github.com/autkarsh025/follow-the-power), which follows the AI boom from money to electricity.)*
+
+</div>
+
+---
 
 An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, estimates grid carbon intensity, and publishes a self-updating interactive dashboard on how batteries cover solar's evening drop-off across **all seven major U.S. power grids** (CAISO, ERCOT, PJM, MISO, SPP, NYISO, ISO-NE), joined with hourly weather.
 
