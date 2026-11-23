@@ -2,8 +2,6 @@
 
 # 🌅 Sundown
 
-### When the sun sets, the batteries clock in.
-
 **An automated data pipeline and live dashboard measuring how grid-scale batteries carry America's seven power grids
 through solar's evening drop-off, with EV-charging carbon, anomalies and data-quality monitoring.**
 
