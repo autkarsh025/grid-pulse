@@ -58,8 +58,13 @@ BATTERY_CODE = "BAT"
 # -7,100 MWh at noon (charging) and +5,000 MWh at 7pm (discharging), swinging +/-11 GW,
 # which is the CAISO battery fleet. So CAISO OTH is mapped to BAT at transform time.
 # Caveat: CAISO "BAT" therefore also includes a small amount of other generation.
+#
+# ERCOT briefly reported part of its battery CHARGING under 'UES' ("unknown energy storage"):
+# ~490 hours in late 2025, every value negative. Left separate, it made Dec 2025 round-trip
+# efficiency read 164% (charging undercounted). Mapped to BAT and summed with it.
 FUEL_CODE_OVERRIDES: dict[tuple[str, str], str] = {
     ("CISO", "OTH"): "BAT",
+    ("ERCO", "UES"): "BAT",
 }
 
 # Direct CO2 emissions per MWh generated, by fuel (kg CO2 / MWh).

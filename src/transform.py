@@ -96,16 +96,24 @@ def transform_generation(records: list[dict]) -> TransformResult:
         return TransformResult(pd.DataFrame(columns=GENERATION_COLUMNS), rows_in, rejected, 0, notes)
     df = df.rename(columns={"fueltype": "fuel_type", "value": "generation_mwh"})
 
-    # Map region-specific codes to a common one (e.g. CAISO reports batteries under OTH).
+    keys = ["region_code", "period_utc", "fuel_type"]
+    # 1) Drop true duplicates (same region, hour and RAW code) before any remapping.
+    dupes = int(df.duplicated(keys).sum())
+    df = df.drop_duplicates(keys, keep="last")
+
+    # 2) Map region-specific codes to a common one (e.g. CAISO reports batteries under OTH).
+    remapped = False
     for (region, raw_code), code in config.FUEL_CODE_OVERRIDES.items():
         mask = (df["region_code"] == region) & (df["fuel_type"] == raw_code)
         if mask.any():
             df.loc[mask, "fuel_type"] = code
+            remapped = True
             notes.append(f"mapped {int(mask.sum())} {region} {raw_code} rows to {code}")
 
-    keys = ["region_code", "period_utc", "fuel_type"]
-    dupes = int(df.duplicated(keys).sum())
-    df = df.drop_duplicates(keys, keep="last")
+    # 3) Two raw codes can now share one key (ERCOT BAT + UES in the same hour): those are
+    #    different parts of the same fleet, so SUM them. Dropping one would lose energy.
+    if remapped:
+        df = df.groupby(keys, as_index=False)["generation_mwh"].sum(min_count=1)
 
     # Negative battery values mean charging; they're real and are kept as-is.
     df["period_utc"] = df["period_utc"].dt.strftime(TS_FORMAT)

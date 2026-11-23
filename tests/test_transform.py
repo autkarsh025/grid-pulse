@@ -79,3 +79,15 @@ def test_region_specific_battery_code_is_mapped():
     codes = dict(zip(res.df["region_code"], res.df["fuel_type"]))
     assert codes == {"CISO": "BAT", "ERCO": "OTH"}  # only CAISO is remapped
     assert any("mapped 1 CISO OTH" in n for n in res.notes)
+
+
+def test_remapped_codes_are_summed_not_dropped():
+    # ERCOT reports some battery charging as 'UES'. When BAT and UES share an hour, both count.
+    records = [
+        {"period": "2025-12-01T18", "respondent": "ERCO", "fueltype": "BAT", "value": "-1000"},
+        {"period": "2025-12-01T18", "respondent": "ERCO", "fueltype": "UES", "value": "-400"},
+        {"period": "2025-12-01T19", "respondent": "ERCO", "fueltype": "UES", "value": "-300"},
+    ]
+    df = transform.transform_generation(records).df.set_index("period_utc")["generation_mwh"]
+    assert df["2025-12-01 18:00:00"] == -1400
+    assert df["2025-12-01 19:00:00"] == -300
