@@ -8,9 +8,9 @@
     "hourly_demand": 61320,
     "hourly_generation": 524182
   },
-  "export_seconds": 12.3,
-  "spark_seconds": 3.3,
+  "export_seconds": 12.6,
+  "spark_seconds": 3.1,
   "partition_filters": "+- FileScan parquet [period_utc#74,fuel_type#75,generation_mwh#76,updated_at#77,region_code#78,month#79] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/runner/work/grid-pulse/grid-pulse/data/lake/hourly_generation], PartitionFilters: [isnotnull(regio",
   "spark_version": "4.0.5",
-  "checked_at": "2026-11-23 14:57 UTC"
+  "checked_at": "2026-11-23 19:07 UTC"
 }
