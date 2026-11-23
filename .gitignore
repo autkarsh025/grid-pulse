@@ -1,0 +1,21 @@
+# secrets
+.env
+
+# data and databases (rebuilt by the pipeline)
+data/
+*.db
+analysis/output/
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# airflow (if you run it locally from this folder)
+logs/
+airflow.db
+airflow.cfg
+
+.DS_Store

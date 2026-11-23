@@ -1,0 +1,121 @@
+"""Build docs/index.html: an interactive, single-file dashboard that GitHub Pages can host for free.
+
+Usage:  python -m analysis.build_dashboard          (reads data/grid_pulse.db)
+
+The page embeds the query results as JSON and draws them with Plotly.js from a CDN,
+so there's no server: open the file locally or publish the docs/ folder with Pages.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sqlite3
+from pathlib import Path
+
+import pandas as pd
+
+from src import config
+
+SQL_DIR = config.ROOT / "sql" / "analysis"
+OUT = config.ROOT / "docs" / "index.html"
+TEMPLATE = Path(__file__).with_name("dashboard_template.html")
+
+
+def q(conn: sqlite3.Connection, sql: str, params=()) -> pd.DataFrame:
+    """Run a query; NaN becomes None so the result serializes to valid JSON (null)."""
+    df = pd.read_sql_query(sql, conn, params=params)
+    return df.astype(object).where(df.notna(), None)
+
+
+def duck_profiles(conn) -> dict:
+    wide = q(conn, (SQL_DIR / "02_hourly_wide.sql").read_text())
+    out = {}
+    for region, r in wide.groupby("region_code"):
+        r = r.copy()
+        r["h"] = pd.to_datetime(r["period_utc"], utc=True).dt.tz_convert(config.REGION_TZ[region]).dt.hour
+        prof = (r.groupby("h")[["demand_mwh", "solar_mwh", "battery_mwh"]].mean() / 1000).round(2)
+        out[region] = {"hour": prof.index.tolist(),
+                       **{c.replace("_mwh", ""): prof[c].where(prof[c].notna(), None).tolist() for c in prof}}
+    return out
+
+
+def recent_series(conn, days: int = 30) -> dict:
+    """Hourly demand and battery for the last N days, per region, for the anomaly explorer."""
+    latest = conn.execute("SELECT MAX(period_utc) FROM hourly_demand").fetchone()[0]
+    out = {}
+    for metric, sql in [
+        ("demand", "SELECT region_code, period_utc, demand_mwh AS v FROM hourly_demand WHERE period_utc >= datetime(?, ?)"),
+        ("battery", f"SELECT region_code, period_utc, generation_mwh AS v FROM hourly_generation "
+                    f"WHERE fuel_type = '{config.BATTERY_CODE}' AND period_utc >= datetime(?, ?)"),
+        ("solar", f"SELECT region_code, period_utc, generation_mwh AS v FROM hourly_generation "
+                  f"WHERE fuel_type = '{config.SOLAR_CODE}' AND period_utc >= datetime(?, ?)"),
+    ]:
+        df = q(conn, sql, (latest, f"-{days} days"))
+        for region, r in df.groupby("region_code"):
+            out.setdefault(region, {})[metric] = {"t": r["period_utc"].tolist(),
+                                                  "v": r["v"].where(r["v"].notna(), None).tolist()}
+    return out
+
+
+def kpis(conn, monthly: pd.DataFrame, peaks: pd.DataFrame) -> dict:
+    one = lambda sql: conn.execute(sql).fetchone()
+    first, last = one("SELECT MIN(period_utc), MAX(period_utc) FROM hourly_demand")
+    hours = one("SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation)")[0]
+    runs_ok, runs_all = one("SELECT SUM(status = 'success'), COUNT(*) FROM pipeline_runs")
+    last_run = one("SELECT status, finished_at FROM pipeline_runs ORDER BY run_id DESC LIMIT 1")
+    growth = {}
+    for region, r in monthly.groupby("region_code"):
+        full = r[r["hours"] >= 24 * 28].dropna(subset=["discharge_mwh"])
+        if len(full) >= 2 and full.iloc[0].discharge_mwh:
+            growth[region] = {"from": full.iloc[0].month, "to": full.iloc[-1].month,
+                              "pct": round(100 * (full.iloc[-1].discharge_mwh / full.iloc[0].discharge_mwh - 1))}
+    peak_share = {reg: round(float(r["battery_share_pct"].mean()), 1) for reg, r in peaks.groupby("region_code")}
+    return {
+        "first": first, "last": last, "rows": int(hours or 0),
+        "runs_ok": int(runs_ok or 0), "runs_all": int(runs_all or 0),
+        "last_run": {"status": last_run[0], "at": last_run[1]} if last_run else None,
+        "growth": growth, "peak_share": peak_share,
+    }
+
+
+def build(db_path: Path) -> Path:
+    conn = sqlite3.connect(db_path)
+    try:
+        monthly = q(conn, (SQL_DIR / "01_battery_monthly_growth.sql").read_text())
+        peaks = q(conn, (SQL_DIR / "03_peak_day_battery_share.sql").read_text())
+        err = q(conn, (SQL_DIR / "04_forecast_error.sql").read_text())
+        anomalies = q(conn, "SELECT region_code, period_utc, metric, kind, ROUND(value) AS value, "
+                            "ROUND(expected) AS expected, ROUND(score, 1) AS score FROM anomalies "
+                            "ORDER BY period_utc DESC LIMIT 500")
+        runs = q(conn, "SELECT run_id, started_at, window_start, window_end, rows_loaded, status, "
+                       "error_message FROM pipeline_runs ORDER BY run_id DESC LIMIT 20")
+        data = {
+            "regions": {k: v for k, v in config.REGIONS.items()},
+            "kpi": kpis(conn, monthly, peaks),
+            "duck": duck_profiles(conn),
+            "monthly": monthly.to_dict(orient="list"),
+            "peaks": peaks.to_dict(orient="records"),
+            "err": err[["region_code", "day", "mape_7d_avg_pct"]].to_dict(orient="list"),
+            "recent": recent_series(conn),
+            "anomalies": anomalies.to_dict(orient="records"),
+            "runs": runs.to_dict(orient="records"),
+        }
+    finally:
+        conn.close()
+
+    payload = json.dumps(data, default=str, allow_nan=False).replace("</", "<\\/")  # safe inside <script>
+    html = TEMPLATE.read_text().replace("__DATA__", payload)
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(html)
+    return OUT
+
+
+def main(argv=None) -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    args = p.parse_args(argv)
+    print(f"Dashboard written to {build(args.db)}")
+
+
+if __name__ == "__main__":
+    main()
