@@ -130,6 +130,24 @@ def upsert_weather(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
     return len(rows)
 
 
+def record_quarantine(conn: sqlite3.Connection, run_id: int | None, bad: pd.DataFrame) -> int:
+    if bad is None or bad.empty:
+        return 0
+    now = utc_now()
+    rows = [(r.region_code, r.period_utc, r.field, None if pd.isna(r.value) else float(r.value), r.reason, run_id, now)
+            for r in bad.itertuples(index=False)]
+    with conn:
+        conn.executemany(
+            """INSERT INTO quarantine (region_code, period_utc, field, value, reason, run_id, quarantined_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(region_code, period_utc, field) DO UPDATE SET
+                   value = excluded.value, reason = excluded.reason, run_id = excluded.run_id,
+                   quarantined_at = excluded.quarantined_at""",
+            rows,
+        )
+    return len(rows)
+
+
 def record_checks(conn: sqlite3.Connection, run_id: int, results) -> None:
     """Persist each data-quality CheckResult for this run (pass or fail)."""
     with conn:

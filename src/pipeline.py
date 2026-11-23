@@ -40,6 +40,10 @@ def transform_step(raw_paths: dict[str, str], start: date, end: date) -> dict[st
     tag = f"{start.isoformat()}_{end.isoformat()}"
     d = transform.transform_demand(transform.load_raw(Path(raw_paths["demand"])))
     g = transform.transform_generation(transform.load_raw(Path(raw_paths["generation"])))
+    clean_demand, bad = quality.split_out_of_range(d.df)
+    if not bad.empty:
+        log.warning("quarantined %d demand values: %s", len(bad), bad["reason"].value_counts().to_dict())
+    d.df = clean_demand
     for name, res in (("demand", d), ("generation", g)):
         log.info("transform %s: %d raw rows -> %d clean rows (%d rejected, %d duplicates dropped)",
                  name, res.rows_in, len(res.df), res.rows_rejected, res.duplicates_dropped)
@@ -48,13 +52,22 @@ def transform_step(raw_paths: dict[str, str], start: date, end: date) -> dict[st
     return {
         "demand": str(transform.stage(d.df, "demand", tag)),
         "generation": str(transform.stage(g.df, "generation", tag)),
+        "quarantine": str(transform.stage(bad, "quarantine", tag)),
     }
 
 
 def quality_step(staged: dict[str, str], start: date, end: date) -> None:
     demand = transform.read_staged(Path(staged["demand"]))
     generation = transform.read_staged(Path(staged["generation"]))
-    quality.enforce(quality.run_batch_checks(demand, generation, start, end))
+    quality.enforce(batch_results(staged, demand, generation, start, end))
+
+
+def batch_results(staged: dict[str, str], demand, generation, start: date, end: date):
+    """All batch checks, including how much had to be quarantined."""
+    bad = transform.read_staged(Path(staged["quarantine"])) if staged.get("quarantine") else None
+    n_bad = 0 if bad is None else len(bad)
+    return quality.run_batch_checks(demand, generation, start, end) + \
+        [quality.check_quarantine_share(n_bad, len(demand))]
 
 
 def load_step(staged: dict[str, str], db_path: Path | None = None) -> int:
@@ -86,9 +99,10 @@ def run_window(start: date, end: date, from_raw: bool = False, db_path: Path | N
     try:
         raw = raw_paths_for(start, end) if from_raw else extract_step(start, end)
         staged = transform_step(raw, start, end)
-        results = quality.run_batch_checks(transform.read_staged(Path(staged["demand"])),
-                                           transform.read_staged(Path(staged["generation"])), start, end)
+        demand = transform.read_staged(Path(staged["demand"]))
+        results = batch_results(staged, demand, transform.read_staged(Path(staged["generation"])), start, end)
         load.record_checks(conn, run_id, results)   # history is kept even when the run fails
+        load.record_quarantine(conn, run_id, transform.read_staged(Path(staged["quarantine"])))
         quality.enforce(results)                    # raises before anything is loaded
         rows = load_step(staged, db_path)
         load.finish_run(conn, run_id, "success", rows)

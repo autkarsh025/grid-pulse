@@ -450,6 +450,12 @@
         <p class="lookfor">a column of green checks means that run’s data passed every test before it was saved. A red ✕ means the pipeline refused to load bad data, which is the point.</p>
         <div class="qgrid" id="qgrid"></div>
       </div>
+      <div class="card wide">
+        <div class="card-head"><div><h2>Quarantined values</h2>
+          <p class="desc">Individual readings that were physically impossible (for example, demand below zero or far above a grid’s all-time record). They’re set aside here with the reason, so they don’t block the rest of the day’s data, and they’re never silently loaded or dropped.</p></div>
+          <button class="btn" data-csv="quarantine">⤓ CSV</button></div>
+        <div class="scroll"><table id="quarantine-table"></table></div>
+      </div>
       <div class="card">
         <h2>Pipeline runs</h2>
         <p class="desc">Every run is logged with its window, rows loaded and status. A failed scheduled run opens a GitHub issue automatically.</p>
@@ -485,6 +491,7 @@
       <div><dt>Anomaly</dt><dd>A reading far outside its normal range for that hour. Real events (heat waves, outages) and data glitches both show up.</dd></div>
       <div><dt>ISO / RTO (the seven grids)</dt><dd>Independent organizations that run the power grid and wholesale market for a region: CAISO (California), ERCOT (Texas), PJM (13 Mid-Atlantic and Midwest states plus DC), MISO (the Midwest and parts of the South), SPP (the Great Plains), NYISO (New York) and ISO-NE (New England).</dd></div>
       <div><dt>Interchange (imports / exports)</dt><dd>Power flowing between neighboring grids. A grid “imports” when it buys more than it sells in an hour.</dd></div>
+      <div><dt>Quarantine</dt><dd>Where impossible individual values are set aside, with the reason, instead of being loaded or silently deleted. A batch only fails if too many values (over 1%) need quarantining.</dd></div>
       <div><dt>Energy balance check</dt><dd>A data-quality test: demand should equal generation minus exports. Each grid reports all three separately, so a mismatch reveals a broken data feed.</dd></div>
       <div><dt>g CO₂ per mile</dt><dd>How much carbon dioxide is released per mile driven: from the tailpipe for a gas car, from power plants for an EV. An average gas car emits about 400.</dd></div>
       <div><dt>EIA</dt><dd>The U.S. Energy Information Administration, the federal agency that publishes this hourly grid data for free.</dd></div>
@@ -573,6 +580,7 @@ const CSV = {
   league: () => download('league_table', LEAGUE_COLS.map(c => c[1]), D.league.map(r => LEAGUE_COLS.map(c => r[c[0]]))),
   temp: () => { const t = D.weather[state.region]; download(`demand_vs_temp_${state.region}`, ['day', 'peak_demand_mw', 'max_temp_f', 'min_temp_f'], t.days.map((d, i) => [d, t.peak_mw[i], t.tmax[i], t.tmin[i]])); },
   inter: () => download('interchange_by_hour', ['region', 'local_hour', 'net_exports_gw'], regions.flatMap(r => (D.interchange[r] || { hour: [] }).hour.map((h, i) => [r, h, D.interchange[r].gw[i]]))),
+  quarantine: () => download('quarantine', ['region', 'hour_utc', 'field', 'value', 'reason'], (D.quarantine || []).map(q => [q.region_code, q.period_utc, q.field, q.value, q.reason])),
   quality: () => download('quality_checks', ['run_id', 'window_start', 'window_end', 'check', 'passed', 'severity', 'detail'], D.quality.map(q => [q.run_id, q.window_start, q.window_end, q.check_name, q.passed, q.severity, q.detail])),
 };
 document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => CSV[b.dataset.csv]());
@@ -885,6 +893,11 @@ function renderQuality() {
     document.getElementById('qgrid').innerHTML = `<table><tr><th>Check</th>${runs.map(r => `<th title="${esc(r.window_start)} → ${esc(r.window_end)}">#${r.run_id}</th>`).join('')}</tr>` +
       checks.map(c => `<tr><td>${esc(c.replace(/_/g, ' '))}</td>${runs.map(r => cell(r, c)).join('')}</tr>`).join('') + '</table>';
   }
+  const qr = D.quarantine || [];
+  document.getElementById('quarantine-table').innerHTML = qr.length
+    ? `<tr><th>Grid</th><th>Hour (UTC)</th><th>Field</th><th class="num">Value</th><th>Reason</th></tr>` +
+      qr.map(q => `<tr><td>${esc(NAME[q.region_code] || q.region_code)}</td><td>${esc(q.period_utc)}</td><td>${esc(q.field)}</td><td class="num">${fmt(q.value)}</td><td>${esc(q.reason)}</td></tr>`).join('')
+    : '<tr><td class="empty">Nothing quarantined. Every value passed validation.</td></tr>';
   document.getElementById('runs-table').innerHTML = `<tr><th>Run</th><th>Window</th><th class="num">Rows</th><th>Status</th></tr>` +
     D.runs.map(r => `<tr title="${esc(r.error_message || '')}"><td>#${r.run_id}</td><td>${esc(r.window_start)} → ${esc(r.window_end)}</td>
       <td class="num">${fmt(r.rows_loaded)}</td><td><span class="status"><span class="dot" style="background:${r.status === 'success' ? C.good : C.crit}"></span>${r.status === 'success' ? '✓' : '✕'} ${esc(r.status)}</span></td></tr>`).join('');

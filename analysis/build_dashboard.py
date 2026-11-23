@@ -252,6 +252,8 @@ def build(db_path: Path) -> Path:
             "battery": battery_payload(bat, rte),
             "records": recs,
             "quality": quality_hist.to_dict(orient="records"),
+            "quarantine": q(conn, "SELECT region_code, period_utc, field, value, reason FROM quarantine "
+                                  "ORDER BY period_utc DESC LIMIT 200").to_dict(orient="records"),
             "ev": ev.payload(hourly_ci) if not hourly_ci.empty else {"regions": {}},
         }
         add_extra_records(data, hourly_ci, net)

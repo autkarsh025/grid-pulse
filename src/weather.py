@@ -28,7 +28,7 @@ ARCHIVE_LAG_DAYS = 6
 def _fetch(url: str, lat: float, lon: float, start: date, end: date, session) -> pd.DataFrame:
     params = {"latitude": lat, "longitude": lon, "hourly": "temperature_2m", "temperature_unit": "fahrenheit",
               "timezone": "GMT", "start_date": start.isoformat(), "end_date": end.isoformat()}
-    resp = session.get(url, params=params, timeout=config.REQUEST_TIMEOUT_S)
+    resp = session.get(url, params=params, timeout=config.WEATHER_TIMEOUT_S)
     resp.raise_for_status()
     hourly = resp.json().get("hourly", {})
     df = pd.DataFrame({"time": hourly.get("time", []), "temp_f": hourly.get("temperature_2m", [])})

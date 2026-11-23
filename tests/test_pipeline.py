@@ -86,3 +86,26 @@ def test_one_bad_chunk_does_not_block_the_rest_of_a_backfill(fake_api, monkeypat
     statuses = [s for (s,) in conn.execute("SELECT status FROM pipeline_runs ORDER BY run_id")]
     assert statuses == ["failed", "success"]
     assert conn.execute("SELECT COUNT(*) FROM hourly_demand").fetchone()[0] == 30 * 24 * 2
+
+
+def test_impossible_values_are_quarantined_not_loaded(fake_api, monkeypatch):
+    def spiky(route, facets, start, end, api_key, session=None):
+        recs = fake_demand_records(start, end) if route == config.REGION_ROUTE else fake_generation_records(start, end)
+        if route == config.REGION_ROUTE:
+            demand_rows = [r for r in recs if r["type"] == "D" and r["respondent"] == "CISO"]
+            demand_rows[5]["value"] = "999999"   # impossible spike
+            demand_rows[9]["value"] = "-3"       # impossible negative
+        return recs
+
+    monkeypatch.setattr(extract, "fetch_hourly", spiky)
+    pipeline.run(date(2026, 10, 1), date(2026, 10, 30), check_freshness=False)   # must NOT fail (2 of 1,440 rows bad)
+    conn = load.connect()
+    q = conn.execute("SELECT field, value, reason FROM quarantine ORDER BY value").fetchall()
+    assert [v for _, v, _ in q] == [-3.0, 999999.0]
+    assert conn.execute("SELECT MAX(demand_mwh) FROM hourly_demand").fetchone()[0] < 100_000  # spike not loaded
+    assert conn.execute("SELECT status FROM pipeline_runs").fetchone()[0] == "success"
+
+
+def test_too_much_quarantine_fails_the_batch():
+    assert not quality.check_quarantine_share(30, 1000).passed   # 3% > 1% limit
+    assert quality.check_quarantine_share(6, 1000).passed

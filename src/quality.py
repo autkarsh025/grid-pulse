@@ -79,6 +79,30 @@ def check_demand_range(df: pd.DataFrame) -> CheckResult:
     return CheckResult("demand_range", not problems, "; ".join(problems) or "all values in range")
 
 
+def split_out_of_range(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Row-level quarantine for demand. Values <= 0 or above the grid's ceiling are removed
+    from the batch (set to NULL) and returned separately with a reason, so 6 bad hours don't
+    block 700 good ones, and nothing bad is loaded or silently dropped."""
+    clean = df.copy()
+    bad_rows = []
+    for region, ceiling in config.MAX_DEMAND_MWH.items():
+        m = (clean["region_code"] == region) & clean["demand_mwh"].notna() & \
+            ((clean["demand_mwh"] <= 0) | (clean["demand_mwh"] > ceiling))
+        for _, r in clean[m].iterrows():
+            reason = "demand <= 0" if r["demand_mwh"] <= 0 else f"demand above {ceiling:,.0f} MWh ceiling"
+            bad_rows.append({"region_code": region, "period_utc": r["period_utc"], "field": "demand_mwh",
+                             "value": r["demand_mwh"], "reason": reason})
+        clean.loc[m, "demand_mwh"] = float("nan")
+    bad = pd.DataFrame(bad_rows, columns=["region_code", "period_utc", "field", "value", "reason"])
+    return clean, bad
+
+
+def check_quarantine_share(n_bad: int, n_total: int, max_share: float = config.MAX_QUARANTINE_SHARE) -> CheckResult:
+    share = n_bad / n_total if n_total else 0.0
+    return CheckResult("quarantine_share", share <= max_share,
+                       f"{n_bad} values quarantined ({share:.2%} of {n_total}; limit {max_share:.0%})")
+
+
 def check_balance(df: pd.DataFrame, max_gap: float = config.MAX_BALANCE_GAP) -> CheckResult:
     """Reconciliation: demand should equal net generation minus interchange (exports).
     Three numbers reported separately by each grid must agree; a gap means a broken feed."""

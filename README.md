@@ -53,7 +53,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 54 tests, no API key needed
+pytest -q                                              # 56 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -86,6 +86,8 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 **Seven grids, two data sources.** The pipeline covers the seven U.S. ISOs/RTOs (config-driven: adding a grid is one line in `src/config.py`). Hourly temperature for each grid's load-center city comes from Open-Meteo (`src/weather.py`) and is joined to demand by hour, giving each grid's heat and cold sensitivity (MW per °F, from least-squares fits on hot and cold days). Weather is treated as *enrichment*: if that API fails, the run logs a warning and the grid data still loads.
 
 **Reconciliation check.** Each grid reports demand, net generation and interchange separately; demand should equal generation minus exports. `quality.check_balance` flags batches where the books don't balance, a classic cross-field data-engineering check.
+
+**Quarantine, not all-or-nothing.** Physically impossible values (demand ≤ 0 or far above a grid's record) are moved to a `quarantine` table with the reason, and the rest of the batch loads. The batch fails only if more than 1% of rows need quarantining. On the first 7-grid run, 6 bad New York hours would otherwise have blocked a whole month.
 
 **Schema migrations.** New columns are added to existing databases by `load.migrate()` (`CREATE TABLE IF NOT EXISTS` never alters a table), so old databases upgrade in place.
 

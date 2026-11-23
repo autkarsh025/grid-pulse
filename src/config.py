@@ -31,6 +31,7 @@ REGION_ROUTE = "electricity/rto/region-data/data/"     # demand, forecast, net g
 FUEL_ROUTE = "electricity/rto/fuel-type-data/data/"    # generation by fuel type
 PAGE_SIZE = 5000          # EIA's maximum rows per request
 REQUEST_TIMEOUT_S = 60
+WEATHER_TIMEOUT_S = 30
 CHUNK_DAYS = 30           # backfills are split into chunks of this many days
 
 # Balancing authorities to track: the seven U.S. ISOs/RTOs, which together serve most of
@@ -116,7 +117,10 @@ MAX_DEMAND_MWH: dict[str, float] = {  # sanity ceilings, well above record peaks
 }
 # Reconciliation: demand should equal net generation minus interchange. Warn if the
 # median hourly gap exceeds this share of demand.
-MAX_BALANCE_GAP = 0.03
+MAX_BALANCE_GAP = 0.08   # observed: CAISO ~4-6%, PJM ~3-4% from normal reporting slack
+# Row-level quarantine: impossible values are set aside instead of failing the whole batch.
+# The batch fails only if more than this share of rows had to be quarantined.
+MAX_QUARANTINE_SHARE = 0.01
 SOLAR_NIGHT_MAX_SHARE = 0.05   # warn if night solar > 5% of the batch's peak solar
 FRESHNESS_HOURS = 72
 

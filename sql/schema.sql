@@ -47,6 +47,19 @@ CREATE TABLE IF NOT EXISTS weather_hourly (
     PRIMARY KEY (region_code, period_utc)
 );
 
+-- Quarantine ("dead-letter") table: individual values that failed validation are kept here,
+-- with the reason, instead of being loaded or silently dropped.
+CREATE TABLE IF NOT EXISTS quarantine (
+    region_code  TEXT NOT NULL,
+    period_utc   TEXT NOT NULL,
+    field        TEXT NOT NULL,
+    value        REAL,
+    reason       TEXT NOT NULL,
+    run_id       INTEGER,
+    quarantined_at TEXT NOT NULL,
+    PRIMARY KEY (region_code, period_utc, field)
+);
+
 -- Every data-quality check result for every run: the pipeline's observability history.
 CREATE TABLE IF NOT EXISTS quality_results (
     run_id      INTEGER NOT NULL REFERENCES pipeline_runs(run_id),
