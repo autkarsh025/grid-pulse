@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `32 passed`.
+**Checkpoint:** `36 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -107,6 +107,12 @@ Quality runs **before** the load ("validate, then publish"), so bad data never r
 - **Flatline:** a non-zero value identical for 8+ hours usually means a frozen sensor or a stale feed. Zeros are excluded because idle batteries at night are normal.
 - **Full refresh:** `anomalies` is a derived table, rebuilt every run. The fact tables load incrementally. Know the tradeoff: a full refresh is simple and always consistent, but at Tesla scale you'd score incrementally.
 
+**Know it cold (`carbon.py`):**
+- **Intensity** = Σ(generation × emission factor) / Σ generation for each hour. Factors come from EIA: coal ≈ 2,257 lb/MWh, gas ≈ 976 lb/MWh, renewables and nuclear 0.
+- **Why batteries are excluded:** a battery has no fuel. Its emissions belong to whatever charged it. Counting its discharge as zero-carbon generation would double-count the solar that charged it.
+- **Battery CO₂ shift** = (discharge MWh × intensity when discharging) − (charge MWh × intensity when charging). Round-trip losses are included, because you charge more MWh than you get back.
+- **The caveat to raise yourself:** this uses *average* intensity. The rigorous measure is *marginal* intensity (which plant actually ramps when the battery acts), which needs dispatch data. Naming a limitation before the interviewer does is a strong signal.
+
 ---
 
 ## Phase 4 · Analysis and findings (1.5 hrs)
@@ -123,6 +129,7 @@ Look for one **surprising** thing (a weird anomaly, a forecast-error spike durin
 - `01`: CTE + `CASE` inside `SUM` (conditional aggregation) + `LAG` for month-over-month change + rolling average with `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW`, using a named `WINDOW`.
 - `02`: pivoting fuel types into columns with conditional aggregation, then a `LEFT JOIN` so demand hours without generation still appear. Time-zone conversion happens in pandas because SQLite has no time-zone support.
 - `03`: two-stage ranking. `ROW_NUMBER() OVER (PARTITION BY region, day ...)` finds each day's peak hour, then a second `ROW_NUMBER` ranks those days. Know `ROW_NUMBER` vs. `RANK` vs. `DENSE_RANK` (ties!).
+- `05`: monthly fuel shares using `SUM(...) OVER (PARTITION BY region, month)`, a window total with no self-join.
 - `04`: MAPE (mean absolute percentage error) per day with a 7-day rolling average. `NULLIF`/filters avoid division by zero.
 
 ---
@@ -156,6 +163,7 @@ git push -u origin main
 - Repo **Settings → Secrets and variables → Actions → New repository secret**: name `EIA_API_KEY`, value = your key.
 - **Actions** tab → `daily-pipeline` → **Run workflow** to test it now. The first run backfills a year (the cache starts empty), and after that it runs daily at 14:00 UTC, loads yesterday, rebuilds the charts and dashboard, and commits them. **Your live dashboard updates itself every day.**
 - `tests.yml` runs pytest on every push. That's the green badge in your README.
+- **Alerting:** if a daily run fails, the workflow opens an issue titled "Daily pipeline failed" with a link to the logs (or comments on the open one). Turn on GitHub notifications and you'll get an email. Close the issue once you've fixed it.
 
 **Know it cold:** GitHub runners start empty every time, so the workflow carries the SQLite file between runs using the Actions cache. That's fine for a demo, but caches can be evicted. In production you'd use a real database (Postgres) or object storage. Saying this unprompted shows judgment.
 
@@ -180,7 +188,7 @@ git push -u origin main
 ### Résumé bullets (fill in only with your real numbers)
 **Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
 - Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across 2 grid regions into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection, with 32 pytest tests and per-run logging.
+- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 36 pytest tests and per-run logging.
 - Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
 
 [N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`
@@ -193,7 +201,9 @@ git push -u origin main
 5. **"How do you handle missing data?"** → Flag, don't fill. Small gaps pass (≤ 2% nulls, ≥ 95% hours); bigger ones fail the run. Filling would make analysis look cleaner than reality.
 6. **"How would this scale at Tesla (thousands of Megapacks, second-level data)?"** → Raw data in object storage as partitioned Parquet; Spark or a warehouse (BigQuery/Snowflake) for transforms; incremental, partition-level loads; streaming ingestion (Kafka) for telemetry; anomaly scoring per device against its own history and its fleet peers.
 7. **"Why median/MAD instead of mean/std?"** → Robust to the very outliers you're trying to find.
-8. **"What would you do differently?"** → Postgres instead of SQLite, incremental anomaly scoring, weather features, alerting (Slack/email) on failed runs.
+8. **"How did you calculate carbon?"** → Generation-weighted average intensity with EIA emission factors. Batteries excluded from the mix. Then say the average-vs-marginal caveat yourself.
+9. **"How do you know when it breaks?"** → Quality gates fail the run, every run is logged in `pipeline_runs`, and a failed scheduled run opens a GitHub issue automatically.
+10. **"What would you do differently?"** → Postgres instead of SQLite, incremental anomaly scoring, weather features, alerting (Slack/email) on failed runs.
 
 ---
 

@@ -41,10 +41,12 @@
   .seg button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 14px;
                 padding: 6px 14px; border-radius: 7px; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; }
   .seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--text-primary); }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
-  .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
-  .kpi .label { color: var(--text-muted); font-size: 13px; }
-  .kpi .value { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  .kpi .label { color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi .value { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
   .kpi .sub { color: var(--text-secondary); font-size: 13px; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 10px; min-width: 0; }
@@ -100,6 +102,16 @@
       <div class="chart tall" id="duck"></div>
     </div>
     <div class="card">
+      <h2 id="ci-title">Grid carbon intensity by hour</h2>
+      <p class="desc">Average kg of CO₂ per MWh generated, by local hour. Green dots mark when batteries charge, red when they discharge.</p>
+      <div class="chart" id="ci"></div>
+    </div>
+    <div class="card">
+      <h2 id="mix-title">Generation mix</h2>
+      <p class="desc">Monthly share of generation by fuel (batteries excluded: they store energy, they don't make it).</p>
+      <div class="chart" id="mix"></div>
+    </div>
+    <div class="card">
       <h2>Monthly battery discharge</h2>
       <p class="desc">Energy sent to the grid by battery storage, per month.</p>
       <div class="chart" id="monthly"></div>
@@ -134,6 +146,7 @@
         <div class="step"><b>Quality gate</b><small>completeness · nulls · ranges</small></div><span class="arrow">→</span>
         <div class="step"><b>Load</b><small>SQL · idempotent upserts</small></div><span class="arrow">→</span>
         <div class="step"><b>Anomalies</b><small>robust z · flatlines</small></div><span class="arrow">→</span>
+        <div class="step"><b>Carbon</b><small>intensity · battery CO₂ shift</small></div><span class="arrow">→</span>
         <div class="step"><b>This page</b><small>scheduled by Airflow / Actions</small></div>
       </div>
     </div>
@@ -198,12 +211,15 @@ function renderKpis() {
   const k = D.kpi, r = state.region;
   const g = k.growth[r];
   const nAnom = D.anomalies.filter(a => a.region_code === r).length;
+  const co2 = (D.carbon[r] || {}).shift;
   const tiles = [
-    ['Hourly records loaded', fmt(k.rows), 'demand + generation rows'],
-    [`Battery discharge growth · ${r}`, g ? (g.pct >= 0 ? '+' : '') + g.pct + '%' : '—', g ? `${g.from} → ${g.to}` : 'needs 2+ full months'],
-    [`Battery share of peak · ${r}`, k.peak_share[r] != null ? k.peak_share[r] + '%' : '—', 'avg over top-10 demand days'],
-    [`Anomalies flagged · ${r}`, fmt(nAnom), 'spikes, drops and flatlines'],
-    ['Pipeline success rate', k.runs_all ? Math.round(100 * k.runs_ok / k.runs_all) + '%' : '—', `${k.runs_ok} of ${k.runs_all} runs`],
+    ['Hourly records', fmt(k.rows), 'demand + generation'],
+    ['Battery growth', g ? (g.pct >= 0 ? '+' : '') + g.pct + '%' : '—', g ? `${g.from} → ${g.to}` : 'needs 2+ full months'],
+    ['Battery share of peak', k.peak_share[r] != null ? k.peak_share[r] + '%' : '—', 'avg, top-10 demand days'],
+    ['CO₂ shifted by batteries', co2 && co2.avoided_tonnes != null ? fmt(co2.avoided_tonnes / 1000, 1) + 'k t' : '—',
+      co2 && co2.charge_intensity != null ? `${fmt(co2.charge_intensity)} → ${fmt(co2.discharge_intensity)} kg/MWh` : 'needs battery data'],
+    ['Anomalies flagged', fmt(nAnom), 'spikes, drops, flatlines'],
+    ['Pipeline success', k.runs_all ? Math.round(100 * k.runs_ok / k.runs_all) + '%' : '—', `${k.runs_ok} of ${k.runs_all} runs`],
   ];
   document.getElementById('kpis').innerHTML = tiles.map(([l, v, s]) =>
     `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`).join('');
@@ -226,6 +242,47 @@ function renderDuck() {
     xaxis: { gridcolor: C.border, title: 'Local hour of day', dtick: 3, range: [-0.6, 23.6] },
     yaxis: { gridcolor: C.border, title: 'GW (average)', zerolinecolor: C.muted },
   }), cfg);
+}
+
+const FUEL = { SUN: ['Solar', '#c98500'], WND: ['Wind', '#3987e5'], WAT: ['Hydro', '#0ca30c'], NUC: ['Nuclear', '#9085e9'],
+               NG: ['Natural gas', '#d55181'], COL: ['Coal', '#e66767'], OIL: ['Oil', '#d95926'] };
+const FUEL_ORDER = ['SUN', 'WND', 'WAT', 'NUC', 'NG', 'COL', 'OIL'];
+
+function renderCarbon() {
+  const r = state.region, c = D.carbon[r];
+  document.getElementById('ci-title').textContent = `Grid carbon intensity by hour · ${r}`;
+  if (!c || !c.hour.length) { document.getElementById('ci').innerHTML = '<div class="empty">No generation data yet</div>'; return; }
+  const duck = D.duck[r] || { hour: [], battery: [] };
+  const byHour = Object.fromEntries(duck.hour.map((h, i) => [h, duck.battery[i]]));
+  const pts = c.hour.map((h, i) => ({ h, kg: c.kg[i], b: byHour[h] }));
+  const charge = pts.filter(p => p.b != null && p.b < 0), dis = pts.filter(p => p.b != null && p.b > 0);
+  Plotly.react('ci', [
+    { x: c.hour, y: c.kg, type: 'scatter', mode: 'lines', name: 'kg CO₂ / MWh', line: { color: C.text, width: 2.5 },
+      hovertemplate: '%{y:,.0f} kg/MWh<extra></extra>' },
+    { x: charge.map(p => p.h), y: charge.map(p => p.kg), type: 'scatter', mode: 'markers', name: 'Batteries charging',
+      marker: { color: C.battery, size: 10, line: { color: '#1a1a19', width: 2 } }, hoverinfo: 'skip' },
+    { x: dis.map(p => p.h), y: dis.map(p => p.kg), type: 'scatter', mode: 'markers', name: 'Batteries discharging',
+      marker: { color: C.crit, size: 10, line: { color: '#1a1a19', width: 2 } }, hoverinfo: 'skip' },
+  ], baseLayout({ xaxis: { gridcolor: C.border, title: 'Local hour of day', dtick: 3 },
+                  yaxis: { gridcolor: C.border, title: 'kg CO₂ per MWh', rangemode: 'tozero' } }), cfg);
+}
+
+function renderMix() {
+  const r = state.region, m = D.mix;
+  document.getElementById('mix-title').textContent = `Generation mix · ${r}`;
+  const idx = m.region_code.map((x, i) => x === r ? i : -1).filter(i => i >= 0);
+  if (!idx.length) { document.getElementById('mix').innerHTML = '<div class="empty">No generation data yet</div>'; return; }
+  const months = [...new Set(idx.map(i => m.month[i]))].sort();
+  const present = [...new Set(idx.map(i => m.fuel_type[i]))];
+  const order = FUEL_ORDER.filter(f => present.includes(f)).concat(present.filter(f => !FUEL_ORDER.includes(f)));
+  const traces = order.map(f => {
+    const share = Object.fromEntries(idx.filter(i => m.fuel_type[i] === f).map(i => [m.month[i], m.share_pct[i]]));
+    const [label, color] = FUEL[f] || [f, C.muted];
+    return { x: months, y: months.map(mo => share[mo] || 0), name: label, type: 'scatter', mode: 'lines',
+             stackgroup: 'one', line: { color, width: 0.5 }, fillcolor: color, hovertemplate: `%{y:.1f}%` };
+  });
+  Plotly.react('mix', traces, baseLayout({ yaxis: { gridcolor: C.border, title: '% of generation', range: [0, 100] },
+                                           legend: { orientation: 'h', y: 1.18, x: 0, font: { color: C.sec, size: 11 } } }), cfg);
 }
 
 function renderMonthly() {
@@ -294,7 +351,7 @@ function renderRuns() {
       <td class="num">${fmt(r.rows_loaded)}</td><td><span class="status"><span class="dot" style="background:${r.status === 'success' ? C.good : C.crit}"></span>${r.status === 'success' ? '✓' : '✕'} ${r.status}</span></td></tr>`).join('');
 }
 
-function renderRegionViews() { renderKpis(); renderDuck(); renderAnomalies(); renderPeaks(); }
+function renderRegionViews() { renderKpis(); renderDuck(); renderCarbon(); renderMix(); renderAnomalies(); renderPeaks(); }
 
 segmented(document.getElementById('region-seg'), regions.map(r => [r, r, regionColor(r)]), 'region', renderRegionViews);
 segmented(document.getElementById('metric-seg'), [['battery', 'Battery'], ['demand', 'Demand'], ['solar', 'Solar']], 'metric', renderAnomalies);

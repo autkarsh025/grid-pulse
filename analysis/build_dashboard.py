@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src import config
+from src import carbon, config
 
 SQL_DIR = config.ROOT / "sql" / "analysis"
 OUT = config.ROOT / "docs" / "index.html"
@@ -78,6 +78,31 @@ def kpis(conn, monthly: pd.DataFrame, peaks: pd.DataFrame) -> dict:
     }
 
 
+def carbon_payload(hourly: pd.DataFrame, shift: pd.DataFrame) -> dict:
+    """Intensity by local hour, plus the battery CO2-shift summary, per region."""
+    out = {}
+    for region in config.REGIONS:
+        prof = carbon.local_hour_profile(hourly, region) if not hourly.empty else pd.DataFrame()
+        row = shift[shift["region_code"] == region] if not shift.empty else pd.DataFrame()
+        summary = None
+        if not row.empty:
+            r = row.iloc[0]
+            clean = lambda v: None if pd.isna(v) else round(float(v), 1)
+            summary = {"avoided_tonnes": clean(r["avoided_tonnes"]),
+                       "charge_intensity": clean(r["charge_intensity"]),
+                       "discharge_intensity": clean(r["discharge_intensity"])}
+        cleanest = None
+        if not prof.empty:
+            best = prof.loc[prof["intensity_kg_per_mwh"].idxmin()]
+            cleanest = {"hour": int(best["local_hour"]), "kg": float(best["intensity_kg_per_mwh"])}
+        out[region] = {
+            "hour": prof["local_hour"].tolist() if not prof.empty else [],
+            "kg": prof["intensity_kg_per_mwh"].tolist() if not prof.empty else [],
+            "shift": summary, "cleanest": cleanest,
+        }
+    return out
+
+
 def build(db_path: Path) -> Path:
     conn = sqlite3.connect(db_path)
     try:
@@ -87,6 +112,9 @@ def build(db_path: Path) -> Path:
         anomalies = q(conn, "SELECT region_code, period_utc, metric, kind, ROUND(value) AS value, "
                             "ROUND(expected) AS expected, ROUND(score, 1) AS score FROM anomalies "
                             "ORDER BY period_utc DESC LIMIT 500")
+        hourly_ci = carbon.hourly_intensity(conn)
+        shift = carbon.battery_shift(hourly_ci) if not hourly_ci.empty else pd.DataFrame()
+        mix = q(conn, (SQL_DIR / "05_fuel_mix_monthly.sql").read_text())
         runs = q(conn, "SELECT run_id, started_at, window_start, window_end, rows_loaded, status, "
                        "error_message FROM pipeline_runs ORDER BY run_id DESC LIMIT 20")
         data = {
@@ -99,6 +127,8 @@ def build(db_path: Path) -> Path:
             "recent": recent_series(conn),
             "anomalies": anomalies.to_dict(orient="records"),
             "runs": runs.to_dict(orient="records"),
+            "carbon": carbon_payload(hourly_ci, shift),
+            "mix": mix.to_dict(orient="list"),
         }
     finally:
         conn.close()

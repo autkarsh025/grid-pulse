@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write   # lets the job commit the refreshed dashboard
+  issues: write     # lets the job open an issue when a run fails
 
 jobs:
   run:
@@ -66,3 +67,18 @@ jobs:
           name: grid_pulse_db
           path: data/grid_pulse.db
           retention-days: 7
+
+      # Alerting: a failed run opens a GitHub issue (or comments on the open one), so failures can't go unnoticed.
+      - name: Open an issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TITLE="Daily pipeline failed"
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Failed again on $(date -u +%F). Run: $RUN_URL"
+          else
+            gh issue create --title "$TITLE" --body "The scheduled run failed on $(date -u +%F). Check the logs: $RUN_URL. The failing window is recorded in pipeline_runs.error_message."
+          fi

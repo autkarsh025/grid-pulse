@@ -15,7 +15,7 @@ matplotlib.use("Agg")  # draw to files, no window needed
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src import config
+from src import carbon, config
 
 SQL_DIR = config.ROOT / "sql" / "analysis"
 OUT_DIR = config.ROOT / "analysis" / "output"
@@ -117,6 +117,17 @@ def main(argv=None) -> None:
     chart_battery_growth(monthly)
     chart_forecast_error(err)
     print_headlines(monthly, peaks, err)
+    conn = sqlite3.connect(args.db)
+    try:
+        shift = carbon.battery_shift(carbon.hourly_intensity(conn))
+    finally:
+        conn.close()
+    shift.to_csv(OUT_DIR / "battery_co2_shift.csv", index=False)
+    for _, r in shift.iterrows():
+        if r["charge_mwh"] > 0:
+            print(f"{r.region_code}: batteries charged at an average {r.charge_intensity:,.0f} kg CO2/MWh and "
+                  f"discharged at {r.discharge_intensity:,.0f}, a net {r.avoided_tonnes:,.0f} t CO2 shifted "
+                  f"(average-intensity method)")
     print(f"\nCharts saved to {IMG_DIR}, tables to {OUT_DIR}")
 
 

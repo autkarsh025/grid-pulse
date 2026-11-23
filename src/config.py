@@ -51,6 +51,17 @@ DEMAND_TYPES: dict[str, str] = {"D": "demand_mwh", "DF": "forecast_mwh"}
 SOLAR_CODE = "SUN"
 BATTERY_CODE = "BAT"
 
+# Direct CO2 emissions per MWh generated, by fuel (kg CO2 / MWh).
+# Coal 2,257 lb/MWh and gas 976 lb/MWh are EIA's 2019 U.S. averages
+# (eia.gov/todayinenergy/detail.php?id=48296). Oil is an approximation; it's a tiny
+# share in CAISO and ERCOT. Solar, wind, hydro and nuclear emit nothing directly.
+# Batteries are excluded: their emissions belong to whatever charged them.
+EMISSION_FACTORS_KG_PER_MWH: dict[str, float] = {
+    "COL": 1024.0,   # 2,257 lb/MWh
+    "NG": 443.0,     # 976 lb/MWh
+    "OIL": 1000.0,   # approximate
+}
+
 # ---------------------------------------------------------------- data quality
 MAX_NULL_SHARE = 0.02          # fail if more than 2% of a value column is missing
 MIN_COMPLETENESS = 0.95        # fail if fewer than 95% of expected hours arrived

@@ -1,6 +1,6 @@
 # grid-pulse ⚡ U.S. grid & battery-storage data pipeline
 
-An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, and publishes an interactive dashboard on how batteries cover solar's evening drop-off in **California (CAISO)** and **Texas (ERCOT)**.
+An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-ahead forecast and generation by fuel, including battery storage) from the **EIA Open Data API**, validates it with data-quality gates, loads it into SQL with idempotent upserts, flags anomalies, estimates grid carbon intensity, and publishes a self-updating interactive dashboard on how batteries cover solar's evening drop-off in **California (CAISO)** and **Texas (ERCOT)**.
 
 **[▶ Live dashboard](https://autkarsh025.github.io/grid-pulse/)** · ![tests](https://github.com/autkarsh025/grid-pulse/actions/workflows/tests.yml/badge.svg)
 
@@ -21,10 +21,12 @@ An automated ETL pipeline that pulls hourly U.S. electricity data (demand, day-a
                               load.py ──► SQLite      (composite keys + upserts = idempotent)
                                    │
                               anomalies.py            (robust z-score spikes/drops, flatlines)
+                              carbon.py               (hourly CO2 intensity, battery CO2 shift)
                                    │
               sql/analysis/*.sql ──► charts + docs/index.html dashboard
 
  Scheduling: Airflow DAG (dags/) or GitHub Actions daily cron (.github/workflows/daily.yml)
+ Alerting:   a failed scheduled run automatically opens a GitHub issue
 ```
 
 ## Tech stack
@@ -39,7 +41,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 32 tests, no API key needed
+pytest -q                                              # 36 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -57,6 +59,10 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **Anomaly detection.** Each hourly value is compared with the same local hour over the previous 28 days using a robust z-score (median and MAD, so one bad day can't distort the baseline). A non-zero reading stuck for 8+ hours is flagged as a flatline, which often means a frozen sensor or a stale feed.
 
+**Carbon intensity.** Each hour's grid intensity is generation-weighted CO₂ per MWh, using EIA's average emission rates for coal and gas (`src/config.py`). Batteries are excluded from the mix, since they re-deliver energy rather than make it. The battery "CO₂ shift" compares the intensity of the hours when batteries charge with the hours when they discharge. This uses average, not marginal, intensity: a deliberate, documented simplification.
+
+**Alerting.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently.
+
 **Raw data kept.** API responses are saved untouched before transforming, so a transform bug can be fixed and replayed without re-downloading.
 
 ## Findings
@@ -65,15 +71,16 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 1. **Battery growth:** _…_
 2. **Duck curve:** _…_
 3. **Peak coverage:** _…_
+4. **Carbon:** _…_
 
 ## Repo layout
 
 ```
-src/        extract, transform, quality, load, anomalies, pipeline (CLI), config
+src/        extract, transform, quality, load, anomalies, carbon, pipeline (CLI), config
 sql/        schema.sql + analysis queries (CTEs, window functions)
 dags/       Airflow DAG: extract >> transform >> quality >> load >> detect_anomalies
 analysis/   charts and dashboard builder
-tests/      pytest: transform, quality, load idempotency, anomalies, end-to-end with mocked API
+tests/      pytest: transform, quality, load idempotency, anomalies, carbon, end-to-end with mocked API
 docs/       dashboard (served by GitHub Pages) and chart images
 ```
 
