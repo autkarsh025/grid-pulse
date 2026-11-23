@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `36 passed`.
+**Checkpoint:** `38 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -107,6 +107,11 @@ Quality runs **before** the load ("validate, then publish"), so bad data never r
 - **Flatline:** a non-zero value identical for 8+ hours usually means a frozen sensor or a stale feed. Zeros are excluded because idle batteries at night are normal.
 - **Full refresh:** `anomalies` is a derived table, rebuilt every run. The fact tables load incrementally. Know the tradeoff: a full refresh is simple and always consistent, but at Tesla scale you'd score incrementally.
 
+**Know it cold: the CAISO battery discovery (your best interview story).**
+The first real run showed no battery data for California, even though CAISO has more than 11 GW of batteries. The fuel profile in `run_analysis` showed why: CAISO doesn't report a `BAT` code, and its `OTH` ("Other") category averaged about −7,100 MWh at noon and +5,000 MWh at 7pm. Only batteries behave like that. EIA folds small categories into "Other" for confidentiality, so the transform now maps CAISO `OTH` → `BAT`. Tell it as: *"The data looked fine and passed every check, but a number didn't make sense, so I profiled it, found the cause, and fixed it at the transform layer with a documented mapping and a test."* That's the exact skill a data engineer is hired for.
+
+**Know it cold (net peak):** batteries discharge at the *net* peak (demand minus solar and wind), not the gross demand peak. In ERCOT the gross peak is late afternoon, when solar is still producing, while batteries discharge after sunset. `06_net_peak_battery_share.sql` measures the share at each day's net peak.
+
 **Know it cold (`carbon.py`):**
 - **Intensity** = Σ(generation × emission factor) / Σ generation for each hour. Factors come from EIA: coal ≈ 2,257 lb/MWh, gas ≈ 976 lb/MWh, renewables and nuclear 0.
 - **Why batteries are excluded:** a battery has no fuel. Its emissions belong to whatever charged it. Counting its discharge as zero-carbon generation would double-count the solar that charged it.
@@ -163,6 +168,7 @@ git push -u origin main
 - Repo **Settings → Secrets and variables → Actions → New repository secret**: name `EIA_API_KEY`, value = your key.
 - **Actions** tab → `daily-pipeline` → **Run workflow** to test it now. The first run backfills a year (the cache starts empty), and after that it runs daily at 14:00 UTC, loads yesterday, rebuilds the charts and dashboard, and commits them. **Your live dashboard updates itself every day.**
 - `tests.yml` runs pytest on every push. That's the green badge in your README.
+- **Full rebuild:** Run workflow → set `backfill_days` (e.g. `365`) to rebuild the database from scratch. Use it after changing transform logic, since old rows were loaded with the old rules.
 - **Alerting:** if a daily run fails, the workflow opens an issue titled "Daily pipeline failed" with a link to the logs (or comments on the open one). Turn on GitHub notifications and you'll get an email. Close the issue once you've fixed it.
 
 **Know it cold:** GitHub runners start empty every time, so the workflow carries the SQLite file between runs using the Actions cache. That's fine for a demo, but caches can be evicted. In production you'd use a real database (Postgres) or object storage. Saying this unprompted shows judgment.
@@ -188,7 +194,7 @@ git push -u origin main
 ### Résumé bullets (fill in only with your real numbers)
 **Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
 - Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across 2 grid regions into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 36 pytest tests and per-run logging.
+- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 38 pytest tests and per-run logging.
 - Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
 
 [N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`
@@ -202,8 +208,9 @@ git push -u origin main
 6. **"How would this scale at Tesla (thousands of Megapacks, second-level data)?"** → Raw data in object storage as partitioned Parquet; Spark or a warehouse (BigQuery/Snowflake) for transforms; incremental, partition-level loads; streaming ingestion (Kafka) for telemetry; anomaly scoring per device against its own history and its fleet peers.
 7. **"Why median/MAD instead of mean/std?"** → Robust to the very outliers you're trying to find.
 8. **"How did you calculate carbon?"** → Generation-weighted average intensity with EIA emission factors. Batteries excluded from the mix. Then say the average-vs-marginal caveat yourself.
-9. **"How do you know when it breaks?"** → Quality gates fail the run, every run is logged in `pipeline_runs`, and a failed scheduled run opens a GitHub issue automatically.
-10. **"What would you do differently?"** → Postgres instead of SQLite, incremental anomaly scoring, weather features, alerting (Slack/email) on failed runs.
+9. **"Tell me about a data problem you found."** → The CAISO `OTH` = batteries story above.
+10. **"How do you know when it breaks?"** → Quality gates fail the run, every run is logged in `pipeline_runs`, and a failed scheduled run opens a GitHub issue automatically.
+11. **"What would you do differently?"** → Postgres instead of SQLite, incremental anomaly scoring, weather features, alerting (Slack/email) on failed runs.
 
 ---
 

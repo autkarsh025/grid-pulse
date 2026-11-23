@@ -67,3 +67,15 @@ def test_empty_input_returns_empty_frame():
     res = transform.transform_generation([])
     assert res.df.empty
     assert isinstance(res.df, pd.DataFrame)
+
+
+def test_region_specific_battery_code_is_mapped():
+    # CAISO reports batteries under 'OTH'; transform maps them to the common 'BAT' code.
+    records = [
+        {"period": "2026-11-01T20", "respondent": "CISO", "fueltype": "OTH", "value": "-7000"},
+        {"period": "2026-11-01T20", "respondent": "ERCO", "fueltype": "OTH", "value": "50"},
+    ]
+    res = transform.transform_generation(records)
+    codes = dict(zip(res.df["region_code"], res.df["fuel_type"]))
+    assert codes == {"CISO": "BAT", "ERCO": "OTH"}  # only CAISO is remapped
+    assert any("mapped 1 CISO OTH" in n for n in res.notes)

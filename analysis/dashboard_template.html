@@ -111,6 +111,11 @@
       <p class="desc">Monthly share of generation by fuel (batteries excluded: they store energy, they don't make it).</p>
       <div class="chart" id="mix"></div>
     </div>
+    <div class="card wide">
+      <h2>Batteries vs. the net peak</h2>
+      <p class="desc">Share of each day's net-peak hour (demand minus solar and wind) supplied by batteries, 7-day rolling average. Batteries target the net peak, the hardest hour of the day once the sun sets, not the gross demand peak.</p>
+      <div class="chart" id="net"></div>
+    </div>
     <div class="card">
       <h2>Monthly battery discharge</h2>
       <p class="desc">Energy sent to the grid by battery storage, per month.</p>
@@ -212,10 +217,11 @@ function renderKpis() {
   const g = k.growth[r];
   const nAnom = D.anomalies.filter(a => a.region_code === r).length;
   const co2 = (D.carbon[r] || {}).shift;
+  const net = (D.net || {})[r];
   const tiles = [
     ['Hourly records', fmt(k.rows), 'demand + generation'],
     ['Battery growth', g ? (g.pct >= 0 ? '+' : '') + g.pct + '%' : '—', g ? `${g.from} → ${g.to}` : 'needs 2+ full months'],
-    ['Battery share of peak', k.peak_share[r] != null ? k.peak_share[r] + '%' : '—', 'avg, top-10 demand days'],
+    ['Battery share of net peak', net && net.recent_30d != null ? net.recent_30d + '%' : '—', 'avg, last 30 days'],
     ['CO₂ shifted by batteries', co2 && co2.avoided_tonnes != null ? fmt(co2.avoided_tonnes / 1000, 1) + 'k t' : '—',
       co2 && co2.charge_intensity != null ? `${fmt(co2.charge_intensity)} → ${fmt(co2.discharge_intensity)} kg/MWh` : 'needs battery data'],
     ['Anomalies flagged', fmt(nAnom), 'spikes, drops, flatlines'],
@@ -283,6 +289,14 @@ function renderMix() {
   });
   Plotly.react('mix', traces, baseLayout({ yaxis: { gridcolor: C.border, title: '% of generation', range: [0, 100] },
                                            legend: { orientation: 'h', y: 1.18, x: 0, font: { color: C.sec, size: 11 } } }), cfg);
+}
+
+function renderNet() {
+  const traces = regions.filter(r => D.net && D.net[r]).map(r => ({
+    x: D.net[r].day, y: D.net[r].share_7d, name: r, type: 'scatter', mode: 'lines',
+    line: { color: regionColor(r), width: 2 }, hovertemplate: '%{y:.1f}%' }));
+  if (!traces.length) { document.getElementById('net').innerHTML = '<div class="empty">No data yet</div>'; return; }
+  Plotly.react('net', traces, baseLayout({ yaxis: { gridcolor: C.border, title: '% of net-peak load', rangemode: 'tozero' } }), cfg);
 }
 
 function renderMonthly() {
@@ -355,7 +369,7 @@ function renderRegionViews() { renderKpis(); renderDuck(); renderCarbon(); rende
 
 segmented(document.getElementById('region-seg'), regions.map(r => [r, r, regionColor(r)]), 'region', renderRegionViews);
 segmented(document.getElementById('metric-seg'), [['battery', 'Battery'], ['demand', 'Demand'], ['solar', 'Solar']], 'metric', renderAnomalies);
-renderHeader(); renderRegionViews(); renderMonthly(); renderErr(); renderRuns();
+renderHeader(); renderRegionViews(); renderNet(); renderMonthly(); renderErr(); renderRuns();
 </script>
 </body>
 </html>

@@ -21,6 +21,12 @@ OUT = config.ROOT / "docs" / "index.html"
 TEMPLATE = Path(__file__).with_name("dashboard_template.html")
 
 
+def nulls(values) -> list:
+    """List with NaN replaced by None (JSON null). Series.where(..., None) is not enough:
+    on a float column pandas silently turns None back into NaN."""
+    return [None if pd.isna(v) else (float(v) if isinstance(v, (int, float)) else v) for v in values]
+
+
 def q(conn: sqlite3.Connection, sql: str, params=()) -> pd.DataFrame:
     """Run a query; NaN becomes None so the result serializes to valid JSON (null)."""
     df = pd.read_sql_query(sql, conn, params=params)
@@ -35,7 +41,7 @@ def duck_profiles(conn) -> dict:
         r["h"] = pd.to_datetime(r["period_utc"], utc=True).dt.tz_convert(config.REGION_TZ[region]).dt.hour
         prof = (r.groupby("h")[["demand_mwh", "solar_mwh", "battery_mwh"]].mean() / 1000).round(2)
         out[region] = {"hour": prof.index.tolist(),
-                       **{c.replace("_mwh", ""): prof[c].where(prof[c].notna(), None).tolist() for c in prof}}
+                       **{c.replace("_mwh", ""): nulls(prof[c]) for c in prof}}
     return out
 
 
@@ -53,7 +59,7 @@ def recent_series(conn, days: int = 30) -> dict:
         df = q(conn, sql, (latest, f"-{days} days"))
         for region, r in df.groupby("region_code"):
             out.setdefault(region, {})[metric] = {"t": r["period_utc"].tolist(),
-                                                  "v": r["v"].where(r["v"].notna(), None).tolist()}
+                                                  "v": nulls(r["v"])}
     return out
 
 
@@ -97,9 +103,22 @@ def carbon_payload(hourly: pd.DataFrame, shift: pd.DataFrame) -> dict:
             cleanest = {"hour": int(best["local_hour"]), "kg": float(best["intensity_kg_per_mwh"])}
         out[region] = {
             "hour": prof["local_hour"].tolist() if not prof.empty else [],
-            "kg": prof["intensity_kg_per_mwh"].tolist() if not prof.empty else [],
+            "kg": nulls(prof["intensity_kg_per_mwh"]) if not prof.empty else [],
             "shift": summary, "cleanest": cleanest,
         }
+    return out
+
+
+def net_payload(net: pd.DataFrame) -> dict:
+    """Battery share of each day's net peak, smoothed with a 7-day rolling mean, per region."""
+    out = {}
+    for region, r in net.groupby("region_code"):
+        r = r.sort_values("day")
+        share = pd.to_numeric(r["battery_share_of_net_peak_pct"], errors="coerce")
+        roll = share.rolling(7, min_periods=3).mean().round(2)
+        recent = share.tail(30).mean()
+        out[region] = {"day": r["day"].tolist(), "share_7d": nulls(roll),
+                       "recent_30d": None if pd.isna(recent) else round(float(recent), 1)}
     return out
 
 
@@ -115,6 +134,7 @@ def build(db_path: Path) -> Path:
         hourly_ci = carbon.hourly_intensity(conn)
         shift = carbon.battery_shift(hourly_ci) if not hourly_ci.empty else pd.DataFrame()
         mix = q(conn, (SQL_DIR / "05_fuel_mix_monthly.sql").read_text())
+        net = q(conn, (SQL_DIR / "06_net_peak_battery_share.sql").read_text())
         runs = q(conn, "SELECT run_id, started_at, window_start, window_end, rows_loaded, status, "
                        "error_message FROM pipeline_runs ORDER BY run_id DESC LIMIT 20")
         data = {
@@ -129,6 +149,7 @@ def build(db_path: Path) -> Path:
             "runs": runs.to_dict(orient="records"),
             "carbon": carbon_payload(hourly_ci, shift),
             "mix": mix.to_dict(orient="list"),
+            "net": net_payload(net),
         }
     finally:
         conn.close()

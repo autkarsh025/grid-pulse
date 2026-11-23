@@ -96,6 +96,13 @@ def transform_generation(records: list[dict]) -> TransformResult:
         return TransformResult(pd.DataFrame(columns=GENERATION_COLUMNS), rows_in, rejected, 0, notes)
     df = df.rename(columns={"fueltype": "fuel_type", "value": "generation_mwh"})
 
+    # Map region-specific codes to a common one (e.g. CAISO reports batteries under OTH).
+    for (region, raw_code), code in config.FUEL_CODE_OVERRIDES.items():
+        mask = (df["region_code"] == region) & (df["fuel_type"] == raw_code)
+        if mask.any():
+            df.loc[mask, "fuel_type"] = code
+            notes.append(f"mapped {int(mask.sum())} {region} {raw_code} rows to {code}")
+
     keys = ["region_code", "period_utc", "fuel_type"]
     dupes = int(df.duplicated(keys).sum())
     df = df.drop_duplicates(keys, keep="last")

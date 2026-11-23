@@ -137,9 +137,18 @@ def main(argv=None) -> None:
     try:
         shift = carbon.battery_shift(carbon.hourly_intensity(conn))
         print_fuel_profile(conn)
+        net = query(conn, "06_net_peak_battery_share.sql")
     finally:
         conn.close()
     shift.to_csv(OUT_DIR / "battery_co2_shift.csv", index=False)
+    net.to_csv(OUT_DIR / "net_peak_battery_share.csv", index=False)
+    for region, r in net.groupby("region_code"):
+        r = r.dropna(subset=["battery_share_of_net_peak_pct"])
+        if len(r) >= 60:
+            first, last = r.head(30), r.tail(30)
+            print(f"{region}: batteries supplied {first.battery_share_of_net_peak_pct.mean():.1f}% of the daily net peak "
+                  f"in the first 30 days ({first.day.iloc[0]}..) vs {last.battery_share_of_net_peak_pct.mean():.1f}% "
+                  f"in the last 30 days (..{last.day.iloc[-1]})")
     for _, r in shift.iterrows():
         if r["charge_mwh"] > 0:
             print(f"{r.region_code}: batteries charged at an average {r.charge_intensity:,.0f} kg CO2/MWh and "

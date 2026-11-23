@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: "0 14 * * *"
   workflow_dispatch:
+    inputs:
+      backfill_days:
+        description: "Rebuild the database from scratch with this many days of history (0 = normal daily run)"
+        default: "0"
 
 permissions:
   contents: write   # lets the job commit the refreshed dashboard
@@ -34,8 +38,12 @@ jobs:
       - name: Run pipeline (backfill a year on the first run, then just yesterday)
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}   # add under Settings > Secrets and variables > Actions
+          BACKFILL_DAYS: ${{ github.event.inputs.backfill_days || '0' }}
         run: |
-          if [ ! -f data/grid_pulse.db ]; then
+          if [ "$BACKFILL_DAYS" != "0" ]; then
+            rm -f data/grid_pulse.db
+            python -m src.pipeline --start "$(date -u -d "$BACKFILL_DAYS days ago" +%F)" --end "$(date -u -d 'yesterday' +%F)"
+          elif [ ! -f data/grid_pulse.db ]; then
             python -m src.pipeline --start "$(date -u -d '365 days ago' +%F)" --end "$(date -u -d 'yesterday' +%F)"
           else
             python -m src.pipeline
