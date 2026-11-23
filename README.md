@@ -43,7 +43,7 @@ California and Texas get a huge share of their electricity from solar. Solar flo
 
 ## Tech stack
 
-Python · pandas · SQL (SQLite) · Airflow · GitHub Actions · pytest · Plotly.js · matplotlib
+Python · pandas · SQL (SQLite, window functions) · **Apache Spark** (PySpark, Parquet) · **Airflow** (Docker) · GitHub Actions · pytest · Plotly.js · matplotlib
 
 ## Quick start
 
@@ -53,10 +53,12 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 57 tests, no API key needed
+pytest -q                                              # 60 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
+pip install -r requirements-spark.txt && python -m spark.net_peak_spark   # Spark cross-check (needs Java 17)
+cd docker/airflow && docker compose up                 # Airflow UI at http://localhost:8080
 ```
 
 A GitHub Actions job runs the pipeline every morning and commits the refreshed dashboard, so the live page updates itself. Daily runs locally: `python -m src.pipeline` (defaults to yesterday, UTC). Re-run transform/load from saved raw files without calling the API: add `--from-raw`.
@@ -89,6 +91,12 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **Quarantine, not all-or-nothing.** Physically impossible values (demand ≤ 0 or far above a grid's record) are moved to a `quarantine` table with the reason, and the rest of the batch loads. The batch fails only if more than 1% of rows need quarantining. On the first 7-grid run, 6 bad New York hours would otherwise have blocked a whole month.
 
+**Spark cross-check.** `spark/net_peak_spark.py` exports the database to a Parquet data lake partitioned by `region_code` and `month`, recomputes the net-peak analysis with Spark window functions, and validates it day by day against the SQL version. On the real data: 2,545 region-days, 0 mismatches. Filters on grid and month use partition pruning. It runs in CI and every morning; the result is on the dashboard.
+
+**Airflow.** `dags/grid_pulse_dag.py` runs the same pipeline as Airflow tasks (`extract >> transform >> quality >> load >> [enrich_weather, detect_anomalies]`), passing file paths through XCom, with retries and backfills. `docker/airflow/docker-compose.yaml` starts it locally in one command.
+
+**Query plans.** `python -m analysis.explain_queries` times every analysis query and prints its SQLite execution plan (index searches vs. full scans).
+
 **Schema migrations.** New columns are added to existing databases by `load.migrate()` (`CREATE TABLE IF NOT EXISTS` never alters a table), so old databases upgrade in place.
 
 **Alerting.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently.
@@ -112,6 +120,8 @@ From one year of hourly EIA data (Nov 23, 2025 – Nov 22, 2026; ~166K records).
 
 ```
 src/        extract, transform, quality, load, anomalies, carbon, battery, ev, weather, stats, pipeline (CLI), config
+spark/      PySpark job: Parquet lake, net-peak analysis, validation against SQL
+docker/     Airflow (standalone) docker-compose for running the DAG locally
 sql/        schema.sql + analysis queries (CTEs, window functions)
 dags/       Airflow DAG: extract >> transform >> quality >> load >> detect_anomalies
 analysis/   charts and dashboard builder

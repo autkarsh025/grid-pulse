@@ -22,7 +22,7 @@ Expected time: about one focused weekend.
    ```
 4. (Already done: your username `autkarsh025` is filled in throughout.)
 
-**Checkpoint:** `57 passed`.
+**Checkpoint:** `60 passed`.
 
 **Know it cold:** why the key lives in `.env` and `.env` is in `.gitignore` (secrets never go in code or git history; a leaked key on GitHub gets scraped within minutes).
 
@@ -201,31 +201,89 @@ git push -u origin main
 
 **Know it cold:** GitHub runners start empty every time, so the workflow carries the SQLite file between runs using the Actions cache. That's fine for a demo, but caches can be evicted. In production you'd use a real database (Postgres) or object storage. Saying this unprompted shows judgment.
 
-### 6b. Airflow (strongly recommended: Tesla's posting names it)
-1. Install Docker Desktop.
-2. Follow Airflow's official "Running Airflow in Docker" quick start (download its `docker-compose.yaml`).
-3. Mount this repo into the containers. In the compose file's `volumes:`, add `- /path/to/grid-pulse:/opt/airflow/grid-pulse` and change the dags volume to `- /path/to/grid-pulse/dags:/opt/airflow/dags`. Set `GRID_PULSE_DATA_DIR=/opt/airflow/grid-pulse/data` and `EIA_API_KEY` in the compose `environment:`.
-4. `docker compose up`, open http://localhost:8080, turn on `grid_pulse`, and trigger a run.
-5. **Screenshot the graph view with all 5 tasks green**, save it as `docs/img/airflow_dag.png`, and add it to the README.
+### 6b. Airflow on your laptop (REQUIRED for the Tesla posting: "demonstrated experience building data pipelines using Airflow")
+You should be able to say you've run, broken and fixed this DAG yourself. About an hour.
+
+1. **Install Docker Desktop** (docker.com) and start it.
+2. Make sure your `.env` (Phase 0) has your EIA key. The Airflow container reads the same file.
+3. Start Airflow:
+   ```bash
+   cd docker/airflow
+   docker compose up
+   ```
+   The first start downloads the image (a few minutes). Wait for a log line saying the webserver is listening on 8080.
+4. Get the admin password (in a second terminal):
+   ```bash
+   docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt
+   ```
+5. Open **http://localhost:8080**, log in as `admin`, find **grid_pulse**, flip its toggle **on**, then press ▶ **Trigger DAG**.
+6. Click the run and open the **Graph** view. Watch `extract → transform → quality → load → enrich_weather / detect_anomalies` turn green. Click a task, then **Logs**, and find the quality-check lines (`[PASS] demand_completeness ...`).
+7. **Screenshot the green graph** → save as `docs/img/airflow_dag.png` → add it to the README under Architecture.
+8. **Break it on purpose** (this is the part interviewers love):
+   - Stop the container (Ctrl+C), change `EIA_API_KEY` in `.env` to `wrong`, run `docker compose up` again, and trigger the DAG.
+   - Watch `extract` fail, wait 10 minutes, **retry** (the DAG sets `retries=2`), and fail again. Downstream tasks show `upstream_failed`; nothing bad was loaded.
+   - Put the real key back, restart, select the failed run, and **Clear** the `extract` task. Airflow re-runs it and everything downstream.
+9. **Backfill a few days** through Airflow:
+   ```bash
+   docker compose exec airflow airflow dags backfill grid_pulse -s 2026-11-01 -e 2026-11-05
+   ```
+   Because loads are idempotent, re-running days you already have changes nothing.
+10. `docker compose down` when you're done.
 
 **Know it cold (`dags/grid_pulse_dag.py`):**
-- **DAG** = directed acyclic graph of tasks: `extract >> transform >> quality >> load >> detect_anomalies`.
+- **DAG** = directed acyclic graph of tasks: `extract >> transform >> quality >> load >> [enrich_weather, detect_anomalies]`.
 - Tasks pass **file paths** via XCom, not DataFrames. XCom lives in Airflow's metadata DB and is meant for small values.
-- Each run processes its **data interval** (one UTC day), so backfills are `airflow dags backfill grid_pulse -s 2026-01-01 -e 2026-11-20`, and because loads are idempotent, re-running any day is safe.
+- Each run processes its **data interval** (one UTC day). Backfills are just more intervals, and because loads are idempotent, re-running any day is safe.
 - `max_active_runs=1` because SQLite allows only one writer at a time.
-- `retries=2` with a 10-minute delay handles transient API failures at the task level.
+- `retries=2` with a 10-minute delay handles transient API failures at the task level. Clearing a task re-runs it and everything downstream.
+- `standalone` mode bundles the scheduler, webserver and a SQLite metadata DB, which is fine for local work. In production, Airflow runs separate scheduler/webserver/worker services with Postgres and a Celery or Kubernetes executor.
+- `tests/test_dag.py` checks the DAG's imports and wiring in CI without installing Airflow (a stub `airflow` package records what the DAG file does).
+
+---
+
+## Phase 6c · Spark (the posting asks for "working knowledge of Spark")
+`spark/net_peak_spark.py` runs in CI and every morning. Read it top to bottom, then run it yourself once:
+```bash
+brew install openjdk@17          # Spark needs Java (macOS)
+pip install -r requirements-spark.txt
+python -m spark.net_peak_spark
+```
+It prints the export size, the Spark result, the validation and the partition-pruning plan. The latest result is also on the dashboard (Data quality tab → Spark cross-check). On the real data: **2,545 region-days compared, 0 mismatches.**
+
+**Know it cold:**
+- **Parquet** is a columnar file format: queries read only the columns they need, compressed. **Partitioning** by `region_code` and `month` creates folders like `region_code=CISO/month=2026-08/`, so a filter on those columns skips the other folders entirely. That's **partition pruning**, and you can show it in the plan (`PartitionFilters: [(region_code = CISO), (month = 2026-08)]`).
+- **Lazy evaluation:** Spark transformations (`filter`, `join`, `withColumn`) only build a plan; nothing runs until an action (`toPandas`, `write`, `count`).
+- **Window functions** in Spark mirror SQL: `Window.partitionBy("region_code", "day").orderBy(desc("net_load_mwh"))` + `row_number()`.
+- **Shuffles:** `groupBy` and window functions move data between workers by key. They're the expensive part. `spark.sql.shuffle.partitions = 8` instead of the default 200 avoids hundreds of tiny tasks on small data.
+- **Migration pattern:** port one step, run both versions, and require identical output before trusting the new one. That's exactly what the validation does, and the run fails on any mismatch.
+- **Honesty line:** "~600K rows isn't big data. It runs on a laptop, but the patterns (partitioned Parquet, pruning, window functions, validation) are the same ones used at fleet scale."
+
+## Phase 6d · Query optimization (for the "Query Optimization" team)
+```bash
+python -m analysis.explain_queries
+```
+It prints each analysis query's runtime and SQLite execution plan. **Know it cold:** `SCAN` reads every row; `SEARCH … USING INDEX` jumps to matching rows. The `(fuel_type, period_utc)` index lets battery- and solar-only queries skip ~500K rows. Primary keys double as indexes for joins. In Spark, the equivalents are partition pruning, predicate pushdown into Parquet, and avoiding unnecessary shuffles.
+
+## Phase 6e · Tableau Public (optional, 30 min: the posting mentions Tableau/Power BI)
+1. Download **Tableau Public** (free) from public.tableau.com.
+2. On the live dashboard, click **⤓ CSV** on "How much of the evening crunch do batteries cover?" and on the generation-mix chart.
+3. Tableau Public → **Connect → Text file** → open a CSV → build one line chart (day on columns, share on rows, region as color).
+4. **Save to Tableau Public** and link it from the README. Now "Tableau" on your résumé is true.
 
 ---
 
 ## Phase 7 · Résumé + interview prep
 
 ### Résumé bullets (fill in only with your real numbers)
-**Grid-Pulse: U.S. Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, pandas | [github link]
-- Built an automated ETL pipeline ingesting [N]K+ hourly records from the EIA API across all 7 U.S. grid operators (plus hourly weather) into SQL, with idempotent upserts, backfills and daily scheduled runs via Airflow and GitHub Actions.
-- Implemented pre-load data-quality gates (completeness, duplicates, nulls, ranges, freshness) and robust z-score anomaly detection and automatic failure alerts, with 57 pytest tests and per-run logging.
-- Analyzed battery dispatch against solar output and demand peaks, finding [real finding with a number]; published an interactive dashboard on GitHub Pages.
+Tailored to Tesla's Energy data-engineering posting. Its keywords (pipelines, Airflow, Spark, data-quality checks, automated reporting, SQL) appear naturally. **Only keep "Airflow" after you've done Phase 6b yourself, and "Tableau" only after 6e.**
 
-[N] = `SELECT (SELECT COUNT(*) FROM hourly_demand) + (SELECT COUNT(*) FROM hourly_generation);`
+**Grid-Pulse: U.S. Power Grid & Battery Storage Data Pipeline** | Python, SQL, Airflow, Spark, GitHub Actions | github.com/autkarsh025/grid-pulse
+- Built and deployed an automated ELT pipeline ingesting 580K+ hourly records from all 7 U.S. grid operators (EIA API) plus hourly weather into SQL, orchestrated with Airflow and scheduled daily via GitHub Actions; idempotent upserts, backfills, schema migrations and per-run logging.
+- Automated data-quality checks before every load (completeness, ranges, energy-balance reconciliation, freshness) with row-level quarantine and auto-filed failure alerts; found and fixed three upstream data issues, including CAISO batteries hidden in EIA's "Other" category.
+- Ported the core analysis to PySpark over a Parquet data lake partitioned by grid and month, validated day for day against SQL (2,545 region-days, 0 mismatches); 60 pytest tests in CI.
+- Published a daily auto-updating dashboard showing batteries now cover ~25% of California's evening net peak (up from 20% a year earlier) and when EV charging is cleanest (27 vs. 400 g CO₂/mile for a gas car).
+
+If you need to cut to 3 bullets, merge the last two. Pick at most 2–3 numbers per bullet; recruiters skim.
 
 ### Questions you'll get, with the gist of a good answer
 1. **"Walk me through it."** → Use the architecture diagram, left to right, in 90 seconds. End with one finding.
@@ -238,7 +296,10 @@ git push -u origin main
 8. **"How did you calculate carbon?"** → Generation-weighted average intensity with EIA emission factors. Batteries excluded from the mix. Then say the average-vs-marginal caveat yourself.
 9. **"Tell me about a data problem you found."** → The CAISO `OTH` = batteries story above.
 10. **"How do you know when it breaks?"** → Quality gates fail the run, every run is logged in `pipeline_runs`, and a failed scheduled run opens a GitHub issue automatically.
-11. **"What would you do differently?"** → Postgres instead of SQLite, incremental anomaly scoring, weather features, alerting (Slack/email) on failed runs.
+11. **"Why Spark if the data fits in SQLite?"** → To learn the patterns the team uses at scale and prove the port is correct: partitioned Parquet, pruning, window functions, validated against SQL with 0 mismatches. Say plainly that 600K rows isn't big data.
+12. **"Show me Airflow."** → The DAG's tasks, XCom passing file paths, retries, clearing a failed task, backfill. You ran and broke it yourself in Phase 6b.
+13. **"How would you optimize a slow query?"** → Read the plan (`EXPLAIN`), look for full scans that should be index searches, filter early, avoid unnecessary sorts and shuffles, partition by the columns you filter on.
+14. **"What would you do differently?"** → Postgres instead of SQLite, Spark for the full pipeline (not one step), incremental anomaly scoring, Slack alerts, a proper demand forecast.
 
 ---
 
@@ -248,7 +309,9 @@ git push -u origin main
 - [ ] Battery fuel code verified in the EIA browser
 - [ ] Findings in the README use only real numbers
 - [ ] Charts in `docs/img/` and dashboard live on Pages
-- [ ] Airflow screenshot in the README (if done)
+- [ ] Airflow run, broken and fixed by you (Phase 6b); screenshot in the README
+- [ ] Spark job run once on your own machine (Phase 6c)
+- [ ] Tableau Public chart linked (optional, Phase 6e)
 - [x] GitHub username filled in everywhere
 - [ ] `.env` and `data/` NOT in the repo
 - [ ] You can explain every file out loud
