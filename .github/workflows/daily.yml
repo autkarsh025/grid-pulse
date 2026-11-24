@@ -69,6 +69,11 @@ jobs:
           git diff --cached --quiet || git commit -m "Daily dashboard refresh"
           git push
 
+      - name: Publish to the public site (built pages only)
+        env:
+          SITE_DEPLOY_TOKEN: ${{ secrets.SITE_DEPLOY_TOKEN }}
+        run: bash deploy_site.sh sundown docs
+
       - name: Save database
         if: always() && hashFiles('data/grid_pulse.db') != ''
         uses: actions/cache/save@v4
