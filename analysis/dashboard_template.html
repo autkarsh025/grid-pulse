@@ -297,14 +297,14 @@
       <div class="card wide">
         <div class="card-head"><div><h2 id="duck-title">An average day on the grid</h2>
           <p class="desc">Average hour of the day over the last 90 days. Batteries charge on midday solar (below zero) and discharge into the evening.</p></div>
-          <button class="btn" data-csv="duck">⤓ CSV</button></div>
+          <button class="btn" data-csv="duck">CSV</button></div>
         <p class="lookfor">the green bars dip below zero around noon (batteries soaking up solar) and jump up after the orange solar line falls at sunset. That evening bump is batteries covering the crunch.</p>
         <div class="chart tall" id="duck"></div>
       </div>
       <div class="card wide">
         <div class="card-head"><div><h2>How much of the evening crunch do batteries cover?</h2>
           <p class="desc">Share of each day's net-peak hour (demand minus solar and wind) supplied by batteries, 7-day rolling average. Batteries target the net peak, the hardest hour after sunset, not the gross demand peak.</p></div>
-          <button class="btn" data-csv="net">⤓ CSV</button></div>
+          <button class="btn" data-csv="net">CSV</button></div>
         <p class="lookfor">a line climbing over the year means batteries are covering a bigger share of the hardest hour of the day. Higher is better. Grids under 3% start hidden; click a name in the legend to show or hide it. Grids with no line don’t report battery data.</p>
         <div class="chart" id="net"></div>
       </div>
@@ -316,7 +316,7 @@
       <div class="card wide">
         <div class="card-head"><div><h2>How well did the grid predict demand?</h2>
           <p class="desc">How far EIA's day-ahead demand forecast missed actual demand (7-day rolling MAPE).</p></div>
-          <button class="btn" data-csv="err">⤓ CSV</button></div>
+          <button class="btn" data-csv="err">CSV</button></div>
         <p class="lookfor">spikes are days the forecast missed badly, often heat waves or storms. Those are exactly the days batteries and spare capacity matter most.</p>
         <div class="chart" id="err"></div>
       </div>
@@ -329,21 +329,21 @@
       <div class="card wide">
         <div class="card-head"><div><h2>Seven grids, side by side</h2>
           <p class="desc">One row per grid, computed from the full year of data. Click a column header to sort; click a row to switch the whole page to that grid. A dash means the grid doesn’t report that data to EIA. For example, PJM and New York have no separate battery category, and New York’s solar is mostly rooftop panels that the grid feed doesn’t count. A dash means “not reported,” never zero.</p></div>
-          <button class="btn" data-csv="league">⤓ CSV</button></div>
+          <button class="btn" data-csv="league">CSV</button></div>
         <p class="lookfor">compare California’s battery share of the net peak with grids that barely have batteries yet, or which grids lean on their neighbors for power (import hours). Bold = the leader in each column.</p>
         <div class="scroll" style="max-height:none"><table class="league" id="league"></table></div>
       </div>
       <div class="card">
         <div class="card-head"><div><h2 id="temp-title">Hotter days, higher demand</h2>
           <p class="desc">Each dot is one day: that day’s peak electricity demand vs. the high temperature in the grid’s main city (weather from Open-Meteo, joined to grid data by hour).</p></div>
-          <button class="btn" data-csv="temp">⤓ CSV</button></div>
+          <button class="btn" data-csv="temp">CSV</button></div>
         <p class="lookfor">the “V” shape: demand climbs on cold days (heating) and climbs faster on hot days (air conditioning). The line’s slope on hot days is how many extra megawatts each degree costs.</p>
         <div class="chart" id="temp"></div>
       </div>
       <div class="card">
         <div class="card-head"><div><h2 id="inter-title">Buying from the neighbors</h2>
           <p class="desc">Average net power flow with neighboring grids by hour of day, last 90 days. Above zero = exporting, below zero = importing.</p></div>
-          <button class="btn" data-csv="inter">⤓ CSV</button></div>
+          <button class="btn" data-csv="inter">CSV</button></div>
         <p class="lookfor">many grids export their midday solar surplus and import in the evening. Batteries let a grid keep more of its own solar for the evening instead of buying power then.</p>
         <div class="chart" id="inter"></div>
       </div>
@@ -361,7 +361,7 @@
       <div class="card wide">
         <div class="card-head"><div><h2 id="ev-title">When should you charge an EV?</h2>
           <p class="desc">CO₂ per mile driven, depending on the hour the car was charged. Because the grid’s mix changes through the day, the same EV can be much cleaner or dirtier depending on <i>when</i> it plugs in. The dashed line is an average gas car.</p></div>
-          <button class="btn" data-csv="ev">⤓ CSV</button></div>
+          <button class="btn" data-csv="ev">CSV</button></div>
         <p class="lookfor">the dip in the middle of the day is solar. Charging then is the cleanest. The higher the line in the evening, the more that hour leans on gas plants. Every point below the dashed line beats a gasoline car.</p>
         <div class="chart" id="ev-chart"></div>
       </div>
@@ -410,28 +410,28 @@
       <div class="card wide">
         <div class="card-head"><div><h2 id="heat-title">When batteries charge and discharge, all year</h2>
           <p class="desc">Average battery output by week (rows) and local hour (columns). Blue = charging, red = discharging. Watch the midday charging band and the evening discharge band, and how both grow over the year.</p></div>
-          <button class="btn" data-csv="heat">⤓ CSV</button></div>
+          <button class="btn" data-csv="heat">CSV</button></div>
         <p class="lookfor">each row is one week, each column an hour of the day. A blue band at midday (charging) and a red band in the evening (discharging) that get stronger over the year mean a bigger, busier battery fleet.</p>
         <div class="chart heat" id="heat"></div>
       </div>
       <div class="card">
         <div class="card-head"><div><h2>How much energy comes back out? (round-trip efficiency)</h2>
           <p class="desc">Energy delivered ÷ energy stored, by month. Lithium-ion fleets typically return about 80–90%.</p></div>
-          <button class="btn" data-csv="rte">⤓ CSV</button></div>
+          <button class="btn" data-csv="rte">CSV</button></div>
         <p class="lookfor">values inside the shaded 80–90% band are normal for lithium-ion batteries; the rest is lost as heat. A jump far outside it usually means a data problem, not physics.</p>
         <div class="chart" id="rte"></div>
       </div>
       <div class="card">
         <div class="card-head"><div><h2>How hard is the fleet working? (full-power hours)</h2>
           <p class="desc">Daily discharge ÷ the fleet's recent peak output: how many hours of flat-out discharge each day represents (7-day average).</p></div>
-          <button class="btn" data-csv="fph">⤓ CSV</button></div>
+          <button class="btn" data-csv="fph">CSV</button></div>
         <p class="lookfor">about 4 hours means the fleet does roughly one full charge-and-discharge cycle a day (most grid batteries are built to run 4 hours at full power).</p>
         <div class="chart" id="fph"></div>
       </div>
       <div class="card">
         <div class="card-head"><div><h2>Battery energy delivered each month</h2>
           <p class="desc">Energy sent to the grid by battery storage, per month.</p></div>
-          <button class="btn" data-csv="monthly">⤓ CSV</button></div>
+          <button class="btn" data-csv="monthly">CSV</button></div>
         <p class="lookfor">taller bars over time mean more battery energy reaching the grid each month. Faded bars are partial months (the current one, or the first month of data), so they’re not a real decline.</p>
         <div class="chart" id="monthly"></div>
       </div>
@@ -449,14 +449,14 @@
       <div class="card">
         <div class="card-head"><div><h2 id="ci-title">How dirty is the grid at each hour?</h2>
           <p class="desc">Average kg of CO₂ per MWh generated, by local hour. Dots mark when batteries charge (blue) and discharge (red).</p></div>
-          <button class="btn" data-csv="ci">⤓ CSV</button></div>
+          <button class="btn" data-csv="ci">CSV</button></div>
         <p class="lookfor">blue dots (charging) sit low, when the grid is clean; red dots (discharging) sit higher, when it’s dirtier. Batteries move clean midday energy into dirtier evening hours.</p>
         <div class="chart" id="ci"></div>
       </div>
       <div class="card">
         <div class="card-head"><div><h2 id="mix-title">Where the electricity comes from</h2>
           <p class="desc">Monthly share of generation by fuel. Batteries are excluded because they store energy rather than generate it.</p></div>
-          <button class="btn" data-csv="mix">⤓ CSV</button></div>
+          <button class="btn" data-csv="mix">CSV</button></div>
         <p class="lookfor">how much of each month’s electricity came from each source. Watch solar (yellow) grow into summer and gas fill the gaps.</p>
         <div class="chart" id="mix"></div>
       </div>
@@ -489,7 +489,7 @@
       <div class="card wide">
         <div class="card-head"><div><h2>Every load was checked: data-quality results, run by run</h2>
           <p class="desc">Every batch is checked <i>before</i> it's loaded. Errors stop the load; warnings are logged. Each column is one pipeline run (newest on the right). Hover a cell for details.</p></div>
-          <button class="btn" data-csv="quality">⤓ CSV</button></div>
+          <button class="btn" data-csv="quality">CSV</button></div>
         <div class="legend-row">
           <span><span class="qcell" style="background:var(--good)">✓</span> passed</span>
           <span><span class="qcell" style="background:var(--warning)">!</span> warning</span>
@@ -506,7 +506,7 @@
       <div class="card wide">
         <div class="card-head"><div><h2>Quarantined values</h2>
           <p class="desc">Individual readings that were physically impossible (for example, demand below zero or far above a grid’s all-time record). They’re set aside here with the reason, so they don’t block the rest of the day’s data, and they’re never silently loaded or dropped.</p></div>
-          <button class="btn" data-csv="quarantine">⤓ CSV</button></div>
+          <button class="btn" data-csv="quarantine">CSV</button></div>
         <div class="scroll"><table id="quarantine-table"></table></div>
       </div>
       <div class="card">
