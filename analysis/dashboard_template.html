@@ -222,33 +222,94 @@
   nav.tabs button{padding:12px 0 10px}
   .dot{border-radius:2px}
   @media (max-width:860px){h1{font-size:32px}.step-card{grid-template-columns:1fr;gap:4px}.kpi{border-right:0;border-bottom:1px solid var(--border)}}
+
+  /* ===== Sundown layout: fixed sidebar (name, grid picker, sections), content on white sheets over a cool grey page ===== */
+  :root[data-theme="light"]{--page:#eceff2;--surface-1:#ffffff;--surface-2:#f2f4f6;--border:#dde1e5}
+  :root, :root[data-theme="dark"]{--page:#0f1113;--surface-1:#181b1e;--surface-2:#202428;--border:#2b3034}
+  .wrap.shell{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100vh}
+  .side{position:sticky;top:0;height:100vh;overflow-y:auto;padding:30px 24px 24px;background:var(--surface-1);border-right:1px solid var(--border);
+        display:flex;flex-direction:column;gap:22px}
+  .side .brand{gap:12px}.side .logo{width:40px;height:40px}
+  .side h1{font-size:30px}
+  .side .tagline{font-size:14px;line-height:1.55;margin:0;color:var(--text-secondary)}
+  .side-label{font-size:12.5px;font-weight:600;color:var(--text-muted);margin-bottom:8px}
+  .side .seg{display:flex;flex-direction:column;align-items:stretch;background:none;border:0;padding:0;gap:1px}
+  .side .seg button{justify-content:flex-start;width:100%;padding:7px 10px;font-size:14px;border-radius:4px}
+  .side .seg button[aria-pressed="true"]{background:var(--surface-2);box-shadow:none;font-weight:600}
+  .side .meta{font-size:12px;margin:8px 0 0}
+  .side nav.tabs{position:static;flex-direction:column;gap:1px;margin:0;border:0;overflow:visible;background:none}
+  .side nav.tabs button{text-align:left;padding:7px 10px;border:0;border-radius:4px;margin:0;font-size:14px;color:var(--text-secondary)}
+  .side nav.tabs button[aria-selected="true"]{background:var(--surface-2);color:var(--text-primary);font-weight:600}
+  .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  .side-foot .top-right{align-items:flex-start}.side-foot .badge{font-size:12px;white-space:normal}.side-foot .row{gap:6px}
+  .main{padding:28px 40px 80px;max-width:1240px;width:100%}
+  .main .kpis{background:var(--surface-1);border:1px solid var(--border);border-radius:6px;margin:0 0 20px}
+  .main .card{border:1px solid var(--border);background:var(--surface-1)}
+  .wide-block{grid-column:1/-1;background:var(--surface-1);border:1px solid var(--border);border-radius:6px;padding:4px 24px 18px}
+  .wide-block .insights{margin-top:14px;border-top:0;padding-top:4px}
+  .wide-block .intro{margin-top:10px;padding-top:4px;border-top:1px solid var(--border)}
+  .wide-block .intro summary h2{font-size:18px}
+  .main footer, .main .glossary{margin-left:0}
+  @media (max-width:980px){.wrap.shell{grid-template-columns:1fr}.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--border)}
+    .side .seg{flex-direction:row;flex-wrap:wrap}.side .seg button{width:auto}.side nav.tabs{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px 60px}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div>
-      <div class="brand">
+<div class="wrap shell">
+  <aside class="side">
+    <div class="brand">
         <div class="logo" aria-hidden="true">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-label="Sundown logo: a sun setting on the horizon"><path d="M6 16a6 6 0 0 1 12 0Z" fill="var(--accent)"/><g stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><path d="M12 5.5v2.2M5.3 9.3l1.6 1.5M18.7 9.3l-1.6 1.5M2.8 16h2M19.2 16h2M3 19.5h18"/><path d="M7.5 22h9" opacity=".55"/></g></svg>
         </div>
         <h1>Sun<span>down</span></h1>
       </div>
-      <p class="tagline"><b>Tracking how batteries cover the evening peak on U.S. grids.</b> An automated data pipeline on hourly U.S. grid data from the EIA. It validates, loads and analyzes the data
-        every morning to track how battery storage covers the evening peak across the seven major U.S. power grids.</p>
+    <p class="tagline">How grid batteries cover the evening peak on the seven major U.S. power grids. Rebuilt every morning from hourly EIA data.</p>
+    <div class="side-block"><div class="side-label" id="region-label">Grid</div><span class="seg" id="region-seg" role="group" aria-label="Region"></span><p class="meta">Times are local to each grid unless marked UTC.</p></div>
+    <div class="side-block"><div class="side-label">Sections</div>
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button role="tab" data-tab="overview">Overview</button>
+    <button role="tab" data-tab="compare">Compare grids</button>
+    <button role="tab" data-tab="ev">EV charging</button>
+    <button role="tab" data-tab="batteries">Batteries</button>
+    <button role="tab" data-tab="carbon">Carbon & mix</button>
+    <button role="tab" data-tab="anomalies">Anomalies</button>
+    <button role="tab" data-tab="quality">Data quality & pipeline</button>
+  </nav>
     </div>
-    <div class="top-right">
+    <div class="side-foot"><div class="top-right">
       <div class="row">
         <span id="run-badge"></span>
-        <button class="btn" id="theme-btn" aria-label="Toggle light and dark theme">◐ Theme</button>
+        <button class="btn" id="theme-btn" aria-label="Toggle light and dark theme">Theme</button>
         <a class="btn" href="https://github.com/autkarsh025/grid-pulse">Source code</a>
       </div>
       <div class="meta" id="range"></div>
     </div>
-  </header>
+  </aside>
+  <main class="main">
 
-  <details class="intro" id="intro" open>
-    <summary><h2>What is this? Are batteries keeping the lights on after sunset?</h2><span class="hint">▾ hide</span></summary>
+
+
+
+  <section class="kpis" id="kpis"></section>
+
+
+  <!-- OVERVIEW -->
+  <section class="panel" id="tab-overview" role="tabpanel">
+    <div class="grid">
+      <div class="card wide">
+        <div class="card-head"><div><h2 id="duck-title">An average day on the grid</h2>
+          <p class="desc">Average hour of the day over the last 90 days. Batteries charge on midday solar (below zero) and discharge into the evening.</p></div>
+          <button class="btn" data-csv="duck">CSV</button></div>
+        <p class="lookfor">the green bars dip below zero around noon (batteries soaking up solar) and jump up after the orange solar line falls at sunset. That evening bump is batteries covering the crunch.</p>
+        <div class="chart tall" id="duck"></div>
+      </div>
+      <div class="wide-block">
+  <section class="insights" aria-live="polite">
+    <h3 id="insights-title">Key takeaways</h3>
+    <ul id="insights"></ul>
+  </section>
+  <details class="intro" id="intro">
+    <summary><h2>What is this? Are batteries keeping the lights on after sunset?</h2><span class="hint">show</span></summary>
     <p class="lede">U.S. grids, led by California and Texas, now get a huge share of their electricity from solar panels. That creates a daily problem, and giant batteries
       are becoming the fix. This project <b>automatically collects the U.S. government’s hourly power-grid data every morning</b>, checks it, stores it,
       and measures how much batteries are actually helping.</p>
@@ -268,38 +329,6 @@
       <b>Anomalies</b> (unusual readings the pipeline flagged) and <b>Data quality</b> (proof every load was checked). Terms are explained in the
       <a href="#glossary">glossary</a> at the bottom.</p>
   </details>
-
-  <section class="insights" aria-live="polite">
-    <h3 id="insights-title">Key takeaways</h3>
-    <ul id="insights"></ul>
-  </section>
-
-  <div class="controls">
-    <div><label>Region</label><span class="seg" id="region-seg" role="group" aria-label="Region"></span></div>
-    <div class="meta">All times are local to each grid unless marked UTC.</div>
-  </div>
-
-  <section class="kpis" id="kpis"></section>
-
-  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
-    <button role="tab" data-tab="overview">Overview</button>
-    <button role="tab" data-tab="compare">Compare grids</button>
-    <button role="tab" data-tab="ev">EV charging</button>
-    <button role="tab" data-tab="batteries">Batteries</button>
-    <button role="tab" data-tab="carbon">Carbon & mix</button>
-    <button role="tab" data-tab="anomalies">Anomalies</button>
-    <button role="tab" data-tab="quality">Data quality & pipeline</button>
-  </nav>
-
-  <!-- OVERVIEW -->
-  <section class="panel" id="tab-overview" role="tabpanel">
-    <div class="grid">
-      <div class="card wide">
-        <div class="card-head"><div><h2 id="duck-title">An average day on the grid</h2>
-          <p class="desc">Average hour of the day over the last 90 days. Batteries charge on midday solar (below zero) and discharge into the evening.</p></div>
-          <button class="btn" data-csv="duck">CSV</button></div>
-        <p class="lookfor">the green bars dip below zero around noon (batteries soaking up solar) and jump up after the orange solar line falls at sunset. That evening bump is batteries covering the crunch.</p>
-        <div class="chart tall" id="duck"></div>
       </div>
       <div class="card wide">
         <div class="card-head"><div><h2>How much of the evening crunch do batteries cover?</h2>
@@ -556,6 +585,7 @@
     Data: U.S. Energy Information Administration, Hourly Electric Grid Monitor (EIA-930), via the Open Data API v2. CAISO batteries are reported inside EIA's "Other" category and remapped by the pipeline.
     <br><b>Sundown</b>, built by Utkarsh Agarwal, <a href="https://github.com/autkarsh025/grid-pulse">Source on GitHub</a>
   </footer>
+  </main>
 </div>
 
 <script id="data" type="application/json">__DATA__</script>
@@ -1019,7 +1049,7 @@ function renderAll() {
 }
 const intro = document.getElementById('intro');
 try { if (localStorage.getItem('gp-intro') === 'closed') intro.open = false; } catch (e) {}
-const syncIntro = () => { intro.querySelector('.hint').textContent = intro.open ? '▾ hide' : '▸ show';
+const syncIntro = () => { intro.querySelector('.hint').textContent = intro.open ? 'Hide' : 'Show';
   try { localStorage.setItem('gp-intro', intro.open ? 'open' : 'closed'); } catch (e) {} };
 intro.addEventListener('toggle', syncIntro); syncIntro();
 readColors();
