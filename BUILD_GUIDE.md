@@ -1,4 +1,4 @@
-# 🌅 Sundown: build guide (your playbook)
+# Sundown: build guide (your playbook)
 
 *Tracking how batteries cover the evening peak on U.S. grids.* (Repo name: `grid-pulse`; the GitHub URLs below keep that name.)
 

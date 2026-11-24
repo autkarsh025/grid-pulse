@@ -1,13 +1,13 @@
 <div align="center">
 
-# 🌅 Sundown
+# Sundown
 
 ### Tracking how batteries cover the evening peak on U.S. grids
 
 **An automated data pipeline and live dashboard measuring how grid-scale batteries carry America's seven power grids
 through solar's evening drop-off, with EV-charging carbon, anomalies and data-quality monitoring.**
 
-*(Repo: `grid-pulse`. Companion project: [⚡ Gigawatt Ledger](https://github.com/autkarsh025/follow-the-power), which follows the AI boom from money to electricity.)*
+*(Repo: `grid-pulse`. Companion project: [Gigawatt Ledger](https://github.com/autkarsh025/follow-the-power), which follows the AI boom from money to electricity.)*
 
 </div>
 
