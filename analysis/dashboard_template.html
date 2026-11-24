@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M6 16a6 6 0 0 1 12 0Z%27 fill=%27%23e8833a%27/%3E%3Cpath d=%27M12 5.5v2.2M5.3 9.3l1.6 1.5M18.7 9.3l-1.6 1.5M3 19.5h18%27 stroke=%27%23e8833a%27 stroke-width=%271.8%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
-<title>Sundown · Tracking how batteries cover the evening peak on U.S. grids</title>
+<title>Sundown: tracking how batteries cover the evening peak on U.S. grids</title>
 <meta name="description" content="An automated data pipeline tracking how battery storage covers the evening net peak in California and Texas, built on hourly EIA data.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
   :root, :root[data-theme="dark"] {
@@ -175,6 +177,51 @@
   @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .records { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .top-right { align-items: flex-start; } }
   @media (max-width: 600px) { .kpis, .records { grid-template-columns: repeat(2, minmax(0, 1fr)); } .wrap { padding: 20px 14px 48px; } }
+
+  /* ===== Design system: Public Sans (the U.S. government typeface, for government grid data), deep amber
+     for solar on white, graphite ink. Overrides the defaults above. ===== */
+  :root[data-theme="light"]{--page:#ffffff;--surface-1:#ffffff;--surface-2:#f3f4f5;--border:#e0e2e4;
+    --text-primary:#1e2225;--text-secondary:#4d5459;--text-muted:#7b8287;--accent:#9a5a08}
+  :root, :root[data-theme="dark"]{--page:#16181a;--surface-1:#16181a;--surface-2:#1f2224;--border:#2d3134;
+    --text-primary:#e9eaeb;--text-secondary:#b5b9bc;--text-muted:#838a8f;--accent:#e0a14a}
+  body{font-family:"Public Sans",system-ui,sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px;padding:40px 32px 80px}
+  .logo{border-radius:6px;width:46px;height:46px}
+  h1{font-size:42px;font-weight:700;letter-spacing:-0.03em}
+  h1 span{color:inherit}
+  .tagline{font-size:16.5px;max-width:62ch;margin-top:10px}
+  .tagline b{color:var(--text-primary);font-weight:600}
+  .badge{border-radius:4px;background:transparent}
+  .btn{border-radius:4px;background:transparent}
+  .btn:focus-visible,nav.tabs button:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .intro{background:none;border:0;border-radius:0;padding:12px 0 0;margin-top:28px}
+  .intro summary h2{font-size:26px;letter-spacing:-0.02em;font-weight:700}
+  .intro .lede{font-size:16.5px;line-height:1.65;max-width:68ch}
+  .steps{grid-template-columns:1fr;gap:0;border-top:1px solid var(--border);margin-top:14px}
+  .step-card{background:none;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:12px 0;display:grid;grid-template-columns:240px 1fr;gap:24px}
+  .step-card .num{display:none}
+  .step-card h4{font-size:15px;margin:0}.step-card p{font-size:14.5px;max-width:70ch}
+  .howto{font-size:14px;max-width:80ch}
+  .insights{background:none;border:0;border-left:0;border-radius:0;padding:18px 0 0;margin-top:32px;border-top:2px solid var(--text-primary)}
+  .insights h3{text-transform:none;letter-spacing:-0.01em;font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 10px}
+  .insights ul{list-style:none;padding:0;margin:0}
+  .insights li{padding:10px 0;border-bottom:1px solid var(--border);font-size:15px;max-width:none}
+  .insights li b{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
+  .lookfor{background:none;border:0;border-left:0;border-radius:0;padding:0;margin:0 0 10px;font-size:13.5px;color:var(--text-secondary)}
+  .lookfor::before{color:var(--text-primary)}
+  .seg{border-radius:4px}.seg button{border-radius:3px}
+  .kpis{gap:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .kpi{background:none;border:0;border-radius:0;border-right:1px solid var(--border);padding:14px 18px}
+  .kpi:last-child{border-right:0}
+  .kpi .value{font-size:30px;font-weight:700;letter-spacing:-0.025em}
+  .card{border-radius:6px;padding:20px 20px 12px}
+  .card h2{font-weight:600;letter-spacing:-0.005em}
+  .hour-chip{border-radius:4px}.bar-track,.bar-fill{border-radius:2px}
+  .calc input,.calc select{border-radius:4px}
+  nav.tabs{gap:22px;margin-top:32px}
+  nav.tabs button{padding:12px 0 10px}
+  .dot{border-radius:2px}
+  @media (max-width:860px){h1{font-size:32px}.step-card{grid-template-columns:1fr;gap:4px}.kpi{border-right:0;border-bottom:1px solid var(--border)}}
 </style>
 </head>
 <body>
@@ -194,7 +241,7 @@
       <div class="row">
         <span id="run-badge"></span>
         <button class="btn" id="theme-btn" aria-label="Toggle light and dark theme">◐ Theme</button>
-        <a class="btn" href="https://github.com/autkarsh025/grid-pulse">GitHub ↗</a>
+        <a class="btn" href="https://github.com/autkarsh025/grid-pulse">Source code</a>
       </div>
       <div class="meta" id="range"></div>
     </div>
@@ -206,13 +253,13 @@
       are becoming the fix. This project <b>automatically collects the U.S. government’s hourly power-grid data every morning</b>, checks it, stores it,
       and measures how much batteries are actually helping.</p>
     <div class="steps">
-      <div class="step-card"><span class="num">1</span><h4>The problem: the evening crunch</h4>
+      <div class="step-card"><h4>The problem: the evening crunch</h4>
         <p>Solar floods the grid at midday, then vanishes at sunset, right when people get home and switch everything on.
            That leaves a steep evening gap that other power plants (mostly natural gas) have to fill fast.</p></div>
-      <div class="step-card"><span class="num">2</span><h4>The fix: store the sun for later</h4>
+      <div class="step-card"><h4>The fix: store the sun for later</h4>
         <p>Grid-scale batteries (like Tesla Megapacks) <b>charge at noon</b> on surplus solar and <b>discharge in the evening</b>,
            shifting clean energy into the hours when it’s needed most.</p></div>
-      <div class="step-card"><span class="num">3</span><h4>This project: an automated data pipeline</h4>
+      <div class="step-card"><h4>This project: an automated data pipeline</h4>
         <p>Every morning, with no human involved, it downloads yesterday’s hourly data from the U.S. Energy Information Administration (EIA),
            runs quality checks, loads it into a SQL database, analyzes it and republishes this page.</p></div>
     </div>
@@ -237,7 +284,7 @@
   <nav class="tabs" role="tablist" aria-label="Dashboard sections">
     <button role="tab" data-tab="overview">Overview</button>
     <button role="tab" data-tab="compare">Compare grids</button>
-    <button role="tab" data-tab="ev">EV charging ⚡</button>
+    <button role="tab" data-tab="ev">EV charging</button>
     <button role="tab" data-tab="batteries">Batteries</button>
     <button role="tab" data-tab="carbon">Carbon & mix</button>
     <button role="tab" data-tab="anomalies">Anomalies</button>
@@ -326,9 +373,9 @@
             <label class="field">Miles driven per day<input id="ev-miles" type="number" min="1" max="300" value="30"></label>
             <label class="field">Car efficiency (kWh per mile, from the window sticker)<input id="ev-kpm" type="number" min="0.15" max="0.7" step="0.01" value="0.28"></label>
             <div class="presets">
-              <button class="btn" data-kpm="0.25">Efficient sedan · 0.25</button>
-              <button class="btn" data-kpm="0.30">Crossover/SUV · 0.30</button>
-              <button class="btn" data-kpm="0.45">Electric pickup · 0.45</button>
+              <button class="btn" data-kpm="0.25">Efficient sedan, 0.25</button>
+              <button class="btn" data-kpm="0.30">Crossover/SUV, 0.30</button>
+              <button class="btn" data-kpm="0.45">Electric pickup, 0.45</button>
             </div>
             <label class="field">When do you usually charge?
               <select id="ev-window">
@@ -470,15 +517,15 @@
       <div class="card">
         <h2>How it works</h2>
         <div class="arch">
-          <div class="step"><b>Extract</b><small>EIA API v2 · paginated · retries</small></div><span class="arrow">→</span>
+          <div class="step"><b>Extract</b><small>EIA API v2, paginated, retries</small></div><span class="arrow">→</span>
           <div class="step"><b>Raw JSON</b><small>replayable snapshots</small></div><span class="arrow">→</span>
-          <div class="step"><b>Transform</b><small>pandas · UTC · code mapping</small></div><span class="arrow">→</span>
-          <div class="step"><b>Quality gate</b><small>completeness · nulls · ranges</small></div><span class="arrow">→</span>
-          <div class="step"><b>Load</b><small>SQL · idempotent upserts</small></div><span class="arrow">→</span>
-          <div class="step"><b>Analytics</b><small>anomalies · carbon · batteries</small></div><span class="arrow">→</span>
-          <div class="step"><b>This page</b><small>daily via GitHub Actions · Airflow DAG</small></div>
+          <div class="step"><b>Transform</b><small>pandas, UTC, code mapping</small></div><span class="arrow">→</span>
+          <div class="step"><b>Quality gate</b><small>completeness, nulls, ranges</small></div><span class="arrow">→</span>
+          <div class="step"><b>Load</b><small>SQL, idempotent upserts</small></div><span class="arrow">→</span>
+          <div class="step"><b>Analytics</b><small>anomalies, carbon, batteries</small></div><span class="arrow">→</span>
+          <div class="step"><b>This page</b><small>daily via GitHub Actions, Airflow DAG</small></div>
         </div>
-        <p class="desc">Stack: Python · pandas · SQLite · SQL window functions · Airflow · GitHub Actions · pytest · Plotly.js</p>
+        <p class="desc">Stack: Python, pandas, SQLite, SQL window functions, Airflow, GitHub Actions, pytest, Plotly.js</p>
       </div>
     </div>
   </section>
@@ -507,7 +554,7 @@
 
   <footer>
     Data: U.S. Energy Information Administration, Hourly Electric Grid Monitor (EIA-930), via the Open Data API v2. CAISO batteries are reported inside EIA's "Other" category and remapped by the pipeline.
-    <br><b>Sundown</b> · built by Utkarsh Agarwal · <a href="https://github.com/autkarsh025/grid-pulse">Source on GitHub</a>
+    <br><b>Sundown</b>, built by Utkarsh Agarwal, <a href="https://github.com/autkarsh025/grid-pulse">Source on GitHub</a>
   </footer>
 </div>
 
@@ -537,7 +584,7 @@ function applyTheme(t) {
   readColors(); state.rendered.clear(); renderAll();
 }
 let initialTheme = 'dark';
-try { initialTheme = localStorage.getItem('gp-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch (e) {}
+try { initialTheme = localStorage.getItem('gp-theme') || 'light'; } catch (e) {}
 document.documentElement.setAttribute('data-theme', initialTheme);
 document.getElementById('theme-btn').onclick = () =>
   applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
@@ -545,7 +592,7 @@ document.getElementById('theme-btn').onclick = () =>
 function baseLayout(extra = {}) {
   return Object.assign({
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: 'Inter, system-ui, sans-serif', color: C.sec, size: 12 },
+    font: { family: '"Public Sans", system-ui, sans-serif', color: C.sec, size: 12 },
     margin: { l: 58, r: 16, t: 10, b: 42 },
     xaxis: { gridcolor: C.border, zeroline: false, linecolor: C.border },
     yaxis: { gridcolor: C.border, zerolinecolor: C.muted, zerolinewidth: 1 },
@@ -598,12 +645,12 @@ document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => CSV[b.dat
 function renderHeader() {
   const k = D.kpi, ok = k.last_run && k.last_run.status === 'success';
   document.getElementById('run-badge').innerHTML = k.last_run
-    ? `<span class="badge"><span class="dot" style="background:${ok ? C.good : C.crit}"></span>${ok ? '✓ Updated' : '✕ Last run failed'} ${esc(k.last_run.at)} UTC</span>` : '';
-  document.getElementById('range').textContent = k.first ? `Data: ${k.first.slice(0, 10)} → ${k.last.slice(0, 10)} · ${fmt(k.rows)} hourly records` : 'No data loaded yet';
+    ? `<span class="badge"><span class="dot" style="background:${ok ? C.good : C.crit}"></span>${ok ? 'Updated' : 'Last run failed'} ${esc(k.last_run.at)} UTC</span>` : '';
+  document.getElementById('range').textContent = k.first ? `Data from ${k.first.slice(0, 10)} to ${k.last.slice(0, 10)}, ${fmt(k.rows)} hourly records` : 'No data loaded yet';
 }
 function renderInsights() {
   const lines = (D.insights || {})[state.region] || [];
-  document.getElementById('insights-title').textContent = `Key takeaways · ${NAME[state.region]} (${D.regions[state.region]})`;
+  document.getElementById('insights-title').textContent = `Key takeaways, ${NAME[state.region]} (${D.regions[state.region]})`;
   document.getElementById('insights').innerHTML = lines.length
     ? lines.map(l => `<li>${esc(l).replace(/(-?\d[\d,]*(?:\.\d+)?%?)/g, '<b>$1</b>')}</li>`).join('') : '<li>Takeaways appear after the first full data load.</li>';
 }
@@ -633,7 +680,7 @@ function renderKpis() {
 // ---------- OVERVIEW
 function renderDuck() {
   const p = D.duck[state.region];
-  document.getElementById('duck-title').textContent = `An average day on the grid · ${NAME[state.region]}`;
+  document.getElementById('duck-title').textContent = `An average day on the grid, ${NAME[state.region]}`;
   if (!p) return empty('duck');
   Plotly.react('duck', [
     { x: p.hour, y: p.battery, type: 'bar', name: 'Battery (+ discharge / − charge)', marker: { color: C.battery }, hovertemplate: '%{y:,.1f} GW<extra>Battery</extra>' },
@@ -652,7 +699,7 @@ function renderNet() {
 }
 function renderRecords() {
   const recs = (D.records || {})[state.region] || [];
-  document.getElementById('records-title').textContent = `Records · ${NAME[state.region]}`;
+  document.getElementById('records-title').textContent = `Records, ${NAME[state.region]}`;
   document.getElementById('records').innerHTML = recs.length ? recs.map(r =>
     `<div class="record"><div class="label">${esc(r.label)}</div><div class="value">${fmt(r.value, r.value < 100 ? 1 : 0)}<small>${esc(r.unit)}</small></div><div class="when">${esc(r.when)}</div></div>`).join('')
     : '<div class="empty">No records yet</div>';
@@ -699,10 +746,10 @@ function renderLeague() {
 }
 function renderTemp() {
   const r = state.region, t = (D.weather || {})[r];
-  document.getElementById('temp-title').textContent = `Hotter days, higher demand · ${NAME[r]}${t && t.city ? ' (' + t.city + ')' : ''}`;
+  document.getElementById('temp-title').textContent = `Hotter days, higher demand, ${NAME[r]}${t && t.city ? ' (' + t.city + ')' : ''}`;
   if (!t || !t.days.length) return empty('temp', 'Weather data appears after the next pipeline run.');
   const traces = [{ x: t.tmax, y: t.peak_mw.map(v => v / 1000), text: t.days, type: 'scatter', mode: 'markers', name: 'One day',
-    marker: { color: regionColor(r), size: 7, opacity: 0.7, line: { color: C.surface, width: 1 } }, hovertemplate: '%{text}<br>High %{x:.0f}°F · peak %{y:.1f} GW<extra></extra>' }];
+    marker: { color: regionColor(r), size: 7, opacity: 0.7, line: { color: C.surface, width: 1 } }, hovertemplate: '%{text}<br>High %{x:.0f}°F, peak %{y:.1f} GW<extra></extra>' }];
   if (t.cooling_mw_per_f != null) {
     const hot = t.tmax.map((x, i) => [x, t.peak_mw[i]]).filter(([x]) => x >= 75);
     const mx = hot.reduce((s, p) => s + p[0], 0) / hot.length, my = hot.reduce((s, p) => s + p[1], 0) / hot.length;
@@ -715,7 +762,7 @@ function renderTemp() {
 }
 function renderInter() {
   const r = state.region, p = (D.interchange || {})[r];
-  document.getElementById('inter-title').textContent = `Buying from the neighbors · ${NAME[r]}`;
+  document.getElementById('inter-title').textContent = `Buying from the neighbors, ${NAME[r]}`;
   if (!p || !p.hour.length) return empty('inter');
   Plotly.react('inter', [{ x: p.hour, y: p.gw, type: 'bar', name: 'Net exports (+) / imports (−)',
     marker: { color: p.gw.map(v => v == null ? C.muted : v >= 0 ? C.divPos : C.divNeg) }, hovertemplate: '%{y:+.2f} GW<extra></extra>' }],
@@ -742,7 +789,7 @@ function evInputs() {
 }
 function renderEvChart() {
   const r = state.region, e = (D.ev && D.ev.regions || {})[r];
-  document.getElementById('ev-title').textContent = `When should you charge an EV? · ${NAME[r]}`;
+  document.getElementById('ev-title').textContent = `When should you charge an EV?, ${NAME[r]}`;
   if (!e || !e.g_per_kwh_90d.length) return empty('ev-chart');
   const { kpm } = evInputs();
   const gpm = e.g_per_kwh_90d.map(v => v == null ? null : +(v * kpm).toFixed(1));
@@ -765,27 +812,27 @@ function renderEvCalc() {
   const evKg = w => e.windows_90d[w] == null ? null : e.windows_90d[w] * kpm * yr / 1000;
   const gasKg = D.ev.gas_g_per_mile * yr / 1000, mine = evKg(win), saved = gasKg - mine;
   const tiles = [
-    ['Your EV, per year', `${fmt(mine)} kg`, `CO₂ · ${fmt(mine / yr * 1000)} g/mile`],
-    ['Same driving in a gas car', `${fmt(gasKg)} kg`, `CO₂ · ${fmt(D.ev.gas_g_per_mile)} g/mile`],
+    ['Your EV, per year', `${fmt(mine)} kg`, `CO₂, ${fmt(mine / yr * 1000)} g/mile`],
+    ['Same driving in a gas car', `${fmt(gasKg)} kg`, `CO₂, ${fmt(D.ev.gas_g_per_mile)} g/mile`],
     ['You avoid', `${fmt(100 * saved / gasKg)}%`, `${fmt(saved)} kg CO₂ a year`],
   ];
   res.innerHTML = tiles.map(([l, v, s]) => `<div class="kpi"><div class="label" style="min-height:0">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`).join('');
-  const rows = [['Gas car', gasKg, C.crit], ['EV · after work', evKg('evening'), C.sec], ['EV · overnight', evKg('overnight'), C.sec],
-                ['EV · midday', evKg('midday'), C.sec], ['EV · smart', evKg('smart'), C.battery]].filter(x => x[1] != null);
+  const rows = [['Gas car', gasKg, C.crit], ['EV, after work', evKg('evening'), C.sec], ['EV, overnight', evKg('overnight'), C.sec],
+                ['EV, midday', evKg('midday'), C.sec], ['EV, smart', evKg('smart'), C.battery]].filter(x => x[1] != null);
   const max = Math.max(...rows.map(x => x[1]));
-  const sel = { evening: 'EV · after work', overnight: 'EV · overnight', midday: 'EV · midday', smart: 'EV · smart' }[win];
+  const sel = { evening: 'EV, after work', overnight: 'EV, overnight', midday: 'EV, midday', smart: 'EV, smart' }[win];
   bars.innerHTML = rows.map(([l, v, c]) => `<div class="bar-row"><span style="${l === sel ? 'color:var(--text-primary);font-weight:600' : ''}">${l}${l === sel ? ' ◀ you' : ''}</span>
     <div class="bar-track"><div class="bar-fill" style="width:${(100 * v / max).toFixed(1)}%;background:${l === sel ? C.battery : c};opacity:${l === sel || l === 'Gas car' ? 1 : 0.55}"></div></div>
     <span class="v">${fmt(v)} kg/yr</span></div>`).join('');
 }
 function renderEvWeek() {
   const r = state.region, e = (D.ev && D.ev.regions || {})[r];
-  document.getElementById('ev-week-title').textContent = `Cleanest hours to charge this week · ${NAME[r]}`;
+  document.getElementById('ev-week-title').textContent = `Cleanest hours to charge this week, ${NAME[r]}`;
   const box = document.getElementById('ev-week');
   if (!e || !e.cleanest_hours_7d.length) { box.innerHTML = '<div class="empty">No data yet</div>'; return; }
   const { kpm } = evInputs(), g = h => e.g_per_kwh_7d[h] == null ? '—' : fmt(e.g_per_kwh_7d[h] * kpm) + ' g/mi';
-  box.innerHTML = `<div class="meta">Cleanest</div><div class="hours">${e.cleanest_hours_7d.map(h => `<span class="hour-chip"><span class="dot" style="background:${C.good}"></span> ${hourLabel(h)} · ${g(h)}</span>`).join('')}</div>
-    <div class="meta" style="margin-top:8px">Dirtiest (avoid if you can)</div><div class="hours">${e.dirtiest_hours_7d.map(h => `<span class="hour-chip"><span class="dot" style="background:${C.crit}"></span> ${hourLabel(h)} · ${g(h)}</span>`).join('')}</div>`;
+  box.innerHTML = `<div class="meta">Cleanest</div><div class="hours">${e.cleanest_hours_7d.map(h => `<span class="hour-chip"><span class="dot" style="background:${C.good}"></span> ${hourLabel(h)}, ${g(h)}</span>`).join('')}</div>
+    <div class="meta" style="margin-top:8px">Dirtiest (avoid if you can)</div><div class="hours">${e.dirtiest_hours_7d.map(h => `<span class="hour-chip"><span class="dot" style="background:${C.crit}"></span> ${hourLabel(h)}, ${g(h)}</span>`).join('')}</div>`;
 }
 function renderEv() { renderEvChart(); renderEvCalc(); renderEvWeek(); }
 ['ev-miles', 'ev-kpm', 'ev-window'].forEach(id => document.getElementById(id).addEventListener('input', renderEv));
@@ -794,7 +841,7 @@ document.querySelectorAll('[data-kpm]').forEach(b => b.onclick = () => { documen
 // ---------- BATTERIES
 function renderHeat() {
   const b = (D.battery || {})[state.region], h = b && b.heatmap;
-  document.getElementById('heat-title').textContent = `When batteries charge and discharge, all year · ${NAME[state.region]}`;
+  document.getElementById('heat-title').textContent = `When batteries charge and discharge, all year, ${NAME[state.region]}`;
   if (!h || !h.weeks.length) return empty('heat');
   const flat = h.z.flat().filter(v => v != null), lim = Math.max(...flat.map(Math.abs), 1);
   Plotly.react('heat', [{ type: 'heatmap', x: h.hours, y: h.weeks, z: h.z, zmin: -lim, zmax: lim, zmid: 0,
@@ -834,7 +881,7 @@ function renderMonthly() {
 }
 function renderPeaks() {
   const r = state.region, rows = D.peaks.filter(p => p.region_code === r);
-  document.getElementById('peaks-title').textContent = `Top-10 demand days · ${NAME[r]}`;
+  document.getElementById('peaks-title').textContent = `Top-10 demand days, ${NAME[r]}`;
   document.getElementById('peaks-table').innerHTML = rows.length
     ? `<tr><th>#</th><th>Day (UTC)</th><th class="num">Peak demand</th><th class="num">Battery</th><th class="num">Share</th></tr>` +
       rows.map(p => `<tr><td>${p.day_rank}</td><td>${esc(p.day)}</td><td class="num">${fmt(p.peak_demand_mwh)} MWh</td><td class="num">${fmt(p.battery_at_peak_mwh)} MWh</td><td class="num">${fmt(p.battery_share_pct, 1)}%</td></tr>`).join('')
@@ -847,7 +894,7 @@ const FUEL = { SUN: ['Solar', '--solar'], WND: ['Wind', '--wind'], WAT: ['Hydro'
 const FUEL_ORDER = ['SUN', 'WND', 'WAT', 'GEO', 'NUC', 'NG', 'COL', 'OIL'];
 function renderCarbon() {
   const r = state.region, c = D.carbon[r];
-  document.getElementById('ci-title').textContent = `How dirty is the grid at each hour? · ${NAME[r]}`;
+  document.getElementById('ci-title').textContent = `How dirty is the grid at each hour?, ${NAME[r]}`;
   if (!c || !c.hour.length) return empty('ci', 'No generation data yet');
   const duck = D.duck[r] || { hour: [], battery: [] }, byHour = Object.fromEntries(duck.hour.map((h, i) => [h, duck.battery[i]]));
   const pts = c.hour.map((h, i) => ({ h, kg: c.kg[i], b: byHour[h] }));
@@ -860,7 +907,7 @@ function renderCarbon() {
 }
 function renderMix() {
   const r = state.region, m = D.mix, idx = byRegion(m, r);
-  document.getElementById('mix-title').textContent = `Where the electricity comes from · ${NAME[r]}`;
+  document.getElementById('mix-title').textContent = `Where the electricity comes from, ${NAME[r]}`;
   if (!idx.length) return empty('mix', 'No generation data yet');
   const months = [...new Set(idx.map(i => m.month[i]))].sort(), present = [...new Set(idx.map(i => m.fuel_type[i]))];
   const order = FUEL_ORDER.filter(f => present.includes(f)).concat(present.filter(f => !FUEL_ORDER.includes(f)));
@@ -877,7 +924,7 @@ function renderMix() {
 // ---------- ANOMALIES
 function renderAnomalies() {
   const r = state.region, m = state.metric;
-  document.getElementById('anom-title').textContent = `Unusual readings the pipeline flagged · ${NAME[r]} · ${m}`;
+  document.getElementById('anom-title').textContent = `Unusual readings the pipeline flagged, ${NAME[r]}, ${m}`;
   const s = (D.recent[r] || {})[m], hits = D.anomalies.filter(a => a.region_code === r && a.metric === m);
   const t0 = s && s.t.length ? s.t[0] : null, recentHits = t0 ? hits.filter(a => a.period_utc >= t0) : [];
   const traces = [];
@@ -892,7 +939,7 @@ function renderAnomalies() {
     ? `<tr><th>Hour (UTC)</th><th>Type</th><th class="num">Value</th><th class="num">Expected</th><th class="num">Score</th></tr>` +
       hits.slice(0, 150).map(a => `<tr><td>${esc(a.period_utc)}</td><td><span class="status"><span class="dot" style="background:${a.kind === 'flatline' ? C.warn : C.crit}"></span>${esc(a.kind)}</span></td>
         <td class="num">${fmt(a.value)}</td><td class="num">${fmt(a.expected)}</td><td class="num">${a.kind === 'flatline' ? a.score + ' h' : fmt(a.score, 1)}</td></tr>`).join('')
-    : `<tr><td class="empty">No anomalies flagged for ${esc(r)} · ${esc(m)}</td></tr>`;
+    : `<tr><td class="empty">No anomalies flagged for ${esc(r)}, ${esc(m)}</td></tr>`;
 }
 
 // ---------- QUALITY
@@ -906,7 +953,7 @@ function renderQuality() {
       const x = q.find(y => y.run_id === run.run_id && y.check_name === chk);
       if (!x) return '<td></td>';
       const [bg, sym, fg] = x.passed ? [C.good, '✓', '#111'] : x.severity === 'warn' ? [C.warn, '!', '#111'] : [C.crit, '✕', '#fff'];
-      return `<td><span class="qcell" style="background:${bg};color:${fg}" title="${esc(chk)} · run #${run.run_id} (${esc(run.window_start)} → ${esc(run.window_end)}): ${esc(x.detail)}">${sym}</span></td>`;
+      return `<td><span class="qcell" style="background:${bg};color:${fg}" title="${esc(chk)}, run #${run.run_id} (${esc(run.window_start)} → ${esc(run.window_end)}): ${esc(x.detail)}">${sym}</span></td>`;
     };
     document.getElementById('qgrid').innerHTML = `<table><tr><th>Check</th>${runs.map(r => `<th title="${esc(r.window_start)} → ${esc(r.window_end)}">#${r.run_id}</th>`).join('')}</tr>` +
       checks.map(c => `<tr><td>${esc(c.replace(/_/g, ' '))}</td>${runs.map(r => cell(r, c)).join('')}</tr>`).join('') + '</table>';
@@ -914,9 +961,9 @@ function renderQuality() {
   const sp = D.spark, box = document.getElementById('spark-box');
   box.innerHTML = !sp ? '<div class="empty">The Spark check appears after the next scheduled run.</div>' :
     `<div class="records" style="margin:4px 0 6px">
-      <div class="record"><div class="label">Result</div><div class="value" style="color:${sp.ok ? C.good : C.crit}">${sp.ok ? '✓ Match' : '✕ Mismatch'}</div><div class="when">checked ${esc(sp.checked_at)}</div></div>
-      <div class="record"><div class="label">Region-days compared</div><div class="value">${fmt(sp.rows_spark)}</div><div class="when">${fmt(sp.value_mismatches)} value mismatches · ${fmt(sp.missing_on_one_side)} missing</div></div>
-      <div class="record"><div class="label">Rows exported to Parquet</div><div class="value">${fmt((sp.rows_exported.hourly_demand || 0) + (sp.rows_exported.hourly_generation || 0))}</div><div class="when">Spark ${esc(sp.spark_version)} · job ${fmt(sp.spark_seconds, 1)} s</div></div>
+      <div class="record"><div class="label">Result</div><div class="value" style="color:${sp.ok ? C.good : C.crit}">${sp.ok ? 'Match' : 'Mismatch'}</div><div class="when">checked ${esc(sp.checked_at)}</div></div>
+      <div class="record"><div class="label">Region-days compared</div><div class="value">${fmt(sp.rows_spark)}</div><div class="when">${fmt(sp.value_mismatches)} value mismatches, ${fmt(sp.missing_on_one_side)} missing</div></div>
+      <div class="record"><div class="label">Rows exported to Parquet</div><div class="value">${fmt((sp.rows_exported.hourly_demand || 0) + (sp.rows_exported.hourly_generation || 0))}</div><div class="when">Spark ${esc(sp.spark_version)}, job ${fmt(sp.spark_seconds, 1)} s</div></div>
     </div><p class="desc" style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">${esc(sp.partition_filters)}</p>`;
   const qr = D.quarantine || [];
   document.getElementById('quarantine-table').innerHTML = qr.length
