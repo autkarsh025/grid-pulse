@@ -8,6 +8,7 @@ so there's no server: open the file locally or publish the docs/ folder with Pag
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import sqlite3
 from pathlib import Path
@@ -275,7 +276,25 @@ def build(db_path: Path) -> Path:
     html = TEMPLATE.read_text().replace("__DATA__", payload)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(html)
+    write_status(data)
     return OUT
+
+
+def write_status(data: dict) -> None:
+    """A small public status file (docs/status.json) that other pages can read without loading the dashboard."""
+    k = data.get("kpi", {})
+    net = (data.get("net") or {}).get("CISO") or {}
+    status = {
+        "built_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "rows": k.get("rows"),
+        "first": str(k.get("first", ""))[:10],
+        "last": str(k.get("last", ""))[:10],
+        "runs_ok": k.get("runs_ok"),
+        "runs_all": k.get("runs_all"),
+        "grids": len(data.get("regions") or []),
+        "ciso_battery_share_30d": net.get("recent_30d"),
+    }
+    (OUT.parent / "status.json").write_text(json.dumps(status, default=str, indent=1))
 
 
 def main(argv=None) -> None:
