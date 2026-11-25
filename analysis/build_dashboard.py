@@ -293,6 +293,13 @@ def write_status(data: dict) -> None:
         "runs_all": k.get("runs_all"),
         "grids": len(data.get("regions") or []),
         "ciso_battery_share_30d": net.get("recent_30d"),
+        # small series for the personal site's charts (rendered in the browser)
+        "charts": {
+            "heatmap": {r: (data.get("battery") or {}).get(r, {}).get("heatmap") for r in ("CISO", "ERCO")},
+            "duck": {r: (data.get("duck") or {}).get(r) for r in ("CISO", "ERCO")},
+            "monthly": data.get("monthly"),
+            "net": {"day": net.get("day"), "share_7d": net.get("share_7d")},
+        },
     }
     (OUT.parent / "status.json").write_text(json.dumps(status, default=str, indent=1))
 
