@@ -1,10 +1,12 @@
 name: daily-pipeline
 
-# Runs every day at 14:00 UTC (6-7am Pacific) for the previous UTC day.
+# Runs every day at 14:00 UTC (6-7am Pacific) and catches up through the previous UTC day.
+# A second run at 20:23 UTC retries if EIA was down in the morning (catch-up makes it a no-op otherwise).
 # Also runnable by hand from the Actions tab ("Run workflow").
 on:
   schedule:
     - cron: "0 14 * * *"
+    - cron: "23 20 * * *"
   workflow_dispatch:
     inputs:
       backfill_days:
@@ -39,7 +41,7 @@ jobs:
           key: grid-pulse-db-${{ github.run_id }}
           restore-keys: grid-pulse-db-
 
-      - name: Run pipeline (backfill a year on the first run, then just yesterday)
+      - name: Run pipeline (backfill a year on the first run, then catch up through yesterday)
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}   # add under Settings > Secrets and variables > Actions
           BACKFILL_DAYS: ${{ github.event.inputs.backfill_days || '0' }}
@@ -67,7 +69,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add docs/
           git diff --cached --quiet || git commit -m "Daily dashboard refresh"
-          git push
+          for i in 1 2 3; do git pull --rebase --autostash -q && git push -q && break; sleep 5; done
 
       - name: Publish to the public site (built pages only)
         env:
@@ -102,3 +104,11 @@ jobs:
           else
             gh issue create --title "$TITLE" --body "The scheduled run failed on $(date -u +%F). Check the logs: $RUN_URL. The failing window is recorded in pipeline_runs.error_message."
           fi
+
+      - name: Close the failure issue once a run succeeds
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --state open --search "Daily pipeline failed in:title" --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then gh issue close "$EXISTING" --comment "Recovered on $(date -u +%F): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"; fi

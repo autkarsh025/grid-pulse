@@ -124,3 +124,30 @@ def test_net_peak_ignores_hours_where_generation_has_not_arrived(fake_api):
     ciso_after = [r for r in after if r[0] == "CISO"]
     # The incomplete last day is dropped instead of reporting a fake ~0% battery share.
     assert ciso_after[-1][1] < [r for r in before if r[0] == "CISO"][-1][1]
+
+
+def test_catch_up_fills_missed_days(fake_api):
+    """A scheduled run starts the day before the newest loaded hour, so an outage leaves no gap."""
+    pipeline.run(date(2026, 10, 1), date(2026, 10, 3), check_freshness=False)
+    assert pipeline.catch_up_start(None, date(2026, 10, 8)) == date(2026, 10, 2)
+    assert pipeline.catch_up_start(None, date(2026, 12, 31)) == date(2026, 12, 18)     # capped at 14 days
+    assert pipeline.catch_up_start(None, date(2026, 10, 1)) == date(2026, 10, 1)       # never after yesterday
+
+
+def test_catch_up_on_empty_database_starts_yesterday():
+    assert pipeline.catch_up_start(None, date(2026, 10, 8)) == date(2026, 10, 8)
+
+
+def test_eia_outage_skips_the_window_but_keeps_fresh_data(fake_api, monkeypatch):
+    import requests
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone.utc).date()
+    pipeline.run(today - timedelta(days=2), today - timedelta(days=2), check_freshness=False)
+
+    def down(*a, **k):
+        raise requests.exceptions.ReadTimeout("EIA timed out")
+
+    monkeypatch.setattr(extract, "fetch_hourly", down)
+    pipeline.run(today - timedelta(days=1), today - timedelta(days=1))     # no exception: data is < 72h old
+    with pytest.raises(requests.exceptions.ReadTimeout):                  # a backfill can't fall back on freshness
+        pipeline.run(date(2026, 1, 1), date(2026, 1, 2))

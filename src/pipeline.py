@@ -1,7 +1,7 @@
 """Orchestrates extract -> transform -> quality -> load for a date range.
 
 Usage:
-    python -m src.pipeline                                  # yesterday (UTC)
+    python -m src.pipeline                                  # catch up through yesterday (UTC)
     python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill
     python -m src.pipeline --from-raw                       # re-run transform/load from saved raw JSON
 
@@ -14,6 +14,8 @@ import argparse
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+import requests
 
 from src import anomalies, config, extract, load, quality, transform, weather
 
@@ -119,10 +121,16 @@ def run(start: date, end: date, from_raw: bool = False, check_freshness: bool | 
         db_path: Path | None = None) -> int:
     # A failed chunk is logged and skipped so one bad month doesn't block a year-long backfill;
     # the run still fails at the end (re-raising the first error) so the problem can't go unnoticed.
-    total, errors = 0, []
+    total, errors, outages = 0, [], []
     for s, e in chunks(start, end):
         try:
             total += run_window(s, e, from_raw, db_path)
+        except requests.exceptions.RequestException as exc:
+            # EIA timing out is not a data problem. The next run catches up on the missed days
+            # (see catch_up_start), and the freshness check below still fails if it lasts too long.
+            log.warning("window %s..%s skipped, EIA unavailable: %s", s, e, exc)
+            print(f"::warning title=EIA unavailable::window {s}..{e} skipped; the next run will catch up")
+            outages.append(exc)
         except Exception as exc:
             log.error("window %s..%s failed: %s", s, e, exc)
             errors.append(exc)
@@ -140,6 +148,8 @@ def run(start: date, end: date, from_raw: bool = False, check_freshness: bool | 
     today = datetime.now(timezone.utc).date()
     if check_freshness is None:
         check_freshness = (today - end).days <= 3
+    if outages and not check_freshness:
+        raise outages[0]   # a historical backfill has no freshness check to fall back on
     if check_freshness:
         conn = load.connect(db_path)
         try:
@@ -149,14 +159,36 @@ def run(start: date, end: date, from_raw: bool = False, check_freshness: bool | 
     return total
 
 
+def catch_up_start(db_path: Path | None, yesterday: date, max_days: int = 14) -> date:
+    """Where a scheduled run should start: the day before the newest loaded hour, so missed days
+    (an API outage, a skipped run) are filled in and EIA's late revisions to the last day are picked up.
+    Capped at `max_days` back; an empty database starts at yesterday."""
+    path = db_path or config.DB_PATH
+    if not Path(path).exists():
+        return yesterday
+    conn = load.connect(db_path)
+    try:
+        latest = conn.execute("SELECT MAX(period_utc) FROM hourly_demand").fetchone()[0]
+    finally:
+        conn.close()
+    if latest is None:
+        return yesterday
+    start = date.fromisoformat(latest[:10]) - timedelta(days=1)
+    return min(yesterday, max(start, yesterday - timedelta(days=max_days - 1)))
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
     p = argparse.ArgumentParser(description="grid-pulse: EIA grid + battery data pipeline")
-    p.add_argument("--start", type=date.fromisoformat, default=yesterday, help="first UTC date (YYYY-MM-DD)")
+    p.add_argument("--start", type=date.fromisoformat, default=None,
+                   help="first UTC date (YYYY-MM-DD; default: catch up from the newest loaded day)")
     p.add_argument("--end", type=date.fromisoformat, default=None, help="last UTC date (default: --start)")
     p.add_argument("--from-raw", action="store_true", help="skip the API; reuse saved raw JSON")
     p.add_argument("--db", type=Path, default=None, help="SQLite path (default: data/grid_pulse.db)")
     args = p.parse_args(argv)
+    if args.start is None:
+        args.start = yesterday if args.from_raw else catch_up_start(args.db, yesterday)
+        args.end = args.end or yesterday
     args.end = args.end or args.start
     if args.end < args.start:
         p.error("--end must be on or after --start")
