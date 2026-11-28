@@ -66,7 +66,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 cp .env.example .env                                   # then paste your free EIA key into .env
 
-pytest -q                                              # 60 tests, no API key needed
+pytest -q                                              # 63 tests, no API key needed
 python -m src.pipeline --start 2025-11-01 --end 2026-11-20   # backfill ~12 months
 python -m analysis.run_analysis                        # SQL analyses -> charts in docs/img/
 python -m analysis.build_dashboard                     # interactive dashboard -> docs/index.html
@@ -74,7 +74,7 @@ pip install -r requirements-spark.txt && python -m spark.net_peak_spark   # Spar
 cd docker/airflow && docker compose up                 # Airflow UI at http://localhost:8080
 ```
 
-A GitHub Actions job runs the pipeline every morning and commits the refreshed dashboard, so the live page updates itself. Daily runs locally: `python -m src.pipeline` (defaults to yesterday, UTC). Re-run transform/load from saved raw files without calling the API: add `--from-raw`.
+A GitHub Actions job runs the pipeline every morning and commits the refreshed dashboard, so the live page updates itself. Daily runs locally: `python -m src.pipeline` (catches up from the newest loaded day through yesterday, UTC, so a missed day fills itself in). Re-run transform/load from saved raw files without calling the API: add `--from-raw`.
 
 ## Design decisions
 
@@ -112,7 +112,7 @@ A GitHub Actions job runs the pipeline every morning and commits the refreshed d
 
 **Schema migrations.** New columns are added to existing databases by `load.migrate()` (`CREATE TABLE IF NOT EXISTS` never alters a table), so old databases upgrade in place.
 
-**Alerting.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently.
+**Alerting and recovery.** If the daily run fails, the workflow opens a GitHub issue with a link to the logs, or comments on the existing one, so a broken pipeline never fails silently; the next successful run closes it. An EIA timeout skips that day with a warning instead of failing (the 72-hour freshness check still fails the run if the outage lasts), and because each run catches up from the newest loaded day, missed days fill in automatically. A second scheduled run in the afternoon retries after a morning outage.
 
 **Raw data kept.** API responses are saved untouched before transforming, so a transform bug can be fixed and replayed without re-downloading.
 
@@ -145,7 +145,6 @@ docs/       dashboard (served by GitHub Pages) and chart images
 ## What I'd add next
 
 - Postgres in Docker, with partitioning by month
-- Weather data (temperature) to explain demand spikes
 - Incremental anomaly scoring instead of a full rebuild
 - At larger scale: object storage for raw data (S3/Parquet), Spark or a warehouse for transforms, streaming ingestion
 
