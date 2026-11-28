@@ -1,16 +1,16 @@
 {
-  "rows_sql": 2566,
-  "rows_spark": 2566,
+  "rows_sql": 2580,
+  "rows_spark": 2580,
   "missing_on_one_side": 0,
   "value_mismatches": 0,
   "ok": true,
   "rows_exported": {
-    "hourly_demand": 61656,
-    "hourly_generation": 527056
+    "hourly_demand": 62160,
+    "hourly_generation": 530280
   },
-  "export_seconds": 9.2,
-  "spark_seconds": 2.5,
+  "export_seconds": 12.1,
+  "spark_seconds": 3.3,
   "partition_filters": "+- FileScan parquet [period_utc#74,fuel_type#75,generation_mwh#76,updated_at#77,region_code#78,month#79] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/home/runner/work/grid-pulse/grid-pulse/data/lake/hourly_generation], PartitionFilters: [isnotnull(regio",
   "spark_version": "4.0.5",
-  "checked_at": "2026-11-25 23:44 UTC"
+  "checked_at": "2026-11-28 10:28 UTC"
 }
