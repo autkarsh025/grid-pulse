@@ -252,6 +252,12 @@
   .main footer, .main .glossary{margin-left:0}
   @media (max-width:980px){.wrap.shell{grid-template-columns:1fr}.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--border)}
     .side .seg{flex-direction:row;flex-wrap:wrap}.side .seg button{width:auto}.side nav.tabs{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px 60px}}
+  /* phones: grid picker and sections become one swipeable row each, so the charts start on the first screen */
+  @media (max-width:600px){.side{padding-bottom:12px}.side .side-block{margin-top:12px}
+    .side .seg,.side nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-right:-16px;padding-right:16px}
+    .side .seg::-webkit-scrollbar,.side nav.tabs::-webkit-scrollbar{display:none}
+    .side .seg button,.side nav.tabs button{flex:0 0 auto;white-space:nowrap}
+    .side .side-block .meta{display:none}.side .tagline{font-size:14px;margin:8px 0 0}}
 </style>
 </head>
 <body>
@@ -1026,6 +1032,7 @@ function showTab(name) {
   if (!state.rendered.has(name)) { TABS[name].forEach(f => f()); state.rendered.add(name); }
   else document.querySelectorAll(`#tab-${name} .js-plotly-plot`).forEach(el => Plotly.Plots.resize(el));
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+  const tb = document.querySelector(`nav.tabs button[data-tab="${name}"]`); if (tb && tb.scrollIntoView) tb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t !== state.tab) showTab(t); });
