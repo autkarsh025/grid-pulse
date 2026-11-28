@@ -1,10 +1,10 @@
 {
- "built_at": "2026-11-28 10:28 UTC",
+ "built_at": "2026-11-28 10:31 UTC",
  "rows": 592440,
  "first": "2025-11-23",
  "last": "2026-11-27",
- "runs_ok": 30,
- "runs_all": 32,
+ "runs_ok": 31,
+ "runs_all": 33,
  "grids": 7,
  "ciso_battery_share_30d": 24.6,
  "charts": {
